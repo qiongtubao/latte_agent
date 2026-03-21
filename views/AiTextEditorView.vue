@@ -1,7 +1,7 @@
 <template>
-  <div class="ai-text-editor flex h-full bg-[#0f0f23] text-white">
+  <div class="ai-text-editor flex h-full bg-[#0f0f23] text-white justify-between">
     <!-- 左侧面板 -->
-    <div class="left-panel w-[280px] flex-shrink-0 bg-[#1e1e2e] border-r border-[#333] overflow-y-auto">
+    <div class="left-panel flex-shrink-0 bg-[#1e1e2e] border-r border-[#333] overflow-y-auto" :style="{ width: leftPanelWidth }">
       <div class="p-4 space-y-3">
         <!-- 模型选择 -->
         <div class="bg-[#2d2d3f] rounded-lg p-3 space-y-2">
@@ -96,6 +96,24 @@
 <script setup lang="ts">
 // 导入必要的依赖
 import { ref, computed } from 'vue';
+
+// 显示的模块数量
+const visibleModules = ref(3); // 默认为3个模块
+
+// 计算左侧面板宽度（根据模块数量动态变化）
+const leftPanelWidth = computed(() => {
+  // 基础宽度
+  const baseWidth = 280;
+  // 每个额外模块增加的宽度
+  const moduleWidth = 20;
+  // 最小宽度
+  const minWidth = 280;
+  // 最大宽度
+  const maxWidth = 400;
+  
+  const calculatedWidth = baseWidth + (visibleModules.value - 1) * moduleWidth;
+  return `${Math.max(minWidth, Math.min(maxWidth, calculatedWidth))}px`;
+});
 
 // 模型选项
 const models = [

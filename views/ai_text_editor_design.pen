@@ -7,7 +7,7 @@
       "x": 0,
       "y": 0,
       "name": "AI 文本编辑器",
-      "width": 600,
+      "width": 700,
       "height": 900,
       "fill": "#0f0f23",
       "children": [
@@ -346,6 +346,7 @@
           "type": "frame",
           "id": "BxWRJ",
           "name": "右侧面板",
+          "x": 280,
           "width": 320,
           "height": 900,
           "fill": "#1e1e2e",

@@ -1,8 +1,7 @@
 <script setup lang="ts">
 /**
- * AI 文本编辑器弹窗组件
- * 用于邮件内容编辑，支持 AI 辅助功能
- * 使用 views/AiTextEditorView 作为核心编辑界面
+ * AI 文本编辑器弹窗包装器
+ * 用于在弹窗中显示 AiTextEditorView
  */
 import { ref } from 'vue'
 import AiTextEditorView from '../../../views/AiTextEditorView.vue'
@@ -23,22 +22,19 @@ const emit = defineEmits<{
 }>()
 
 /**
- * 编辑内容
+ * 取消
  */
-const content = ref(props.initialContent || '')
+const cancel = () => {
+  emit('cancel')
+}
 
 /**
  * 确认
  */
 const confirm = () => {
-  emit('confirm', content.value)
-}
-
-/**
- * 取消
- */
-const cancel = () => {
-  emit('cancel')
+  // 这里可以从 AiTextEditorView 获取内容
+  // 暂时使用空字符串，实际应用中需要实现内容获取逻辑
+  emit('confirm', '')
 }
 </script>
 
