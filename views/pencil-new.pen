@@ -1,0 +1,695 @@
+{
+  "version": "2.9",
+  "children": [
+    {
+      "type": "frame",
+      "id": "3H99y",
+      "x": 0,
+      "y": 0,
+      "name": "AI 文本编辑器",
+      "width": 1400,
+      "height": 900,
+      "fill": "#0f0f23",
+      "children": [
+        {
+          "type": "frame",
+          "id": "CPqFA",
+          "name": "左侧面板",
+          "width": 280,
+          "height": 900,
+          "fill": "#1e1e2e",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "sx7L7",
+              "name": "模型选择",
+              "width": 248,
+              "height": 60,
+              "fill": "#2d2d3f",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "elK2S",
+                  "name": "模型选择标签",
+                  "fill": "#e0e0e0",
+                  "content": "🤖 模型选择",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "0JpXg",
+                  "name": "模型下拉框",
+                  "width": 224,
+                  "height": 36,
+                  "fill": "#3d3d5c",
+                  "cornerRadius": 6,
+                  "padding": [
+                    12,
+                    8
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "FOK3n",
+                      "name": "模型名称",
+                      "fill": "#ffffff",
+                      "content": "qwen3.5:35b",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "0issB",
+                      "name": "下拉图标",
+                      "fill": "#a0a0a0",
+                      "content": "▼",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "u1ry8",
+              "name": "同步选择",
+              "width": 248,
+              "height": 60,
+              "fill": "#2d2d3f",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "V2D1o",
+                  "name": "同步选择标签",
+                  "fill": "#e0e0e0",
+                  "content": "📤 同步到其他模块",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "lZE3d",
+                  "name": "同步下拉框",
+                  "width": 224,
+                  "height": 36,
+                  "fill": "#3d3d5c",
+                  "cornerRadius": 6,
+                  "padding": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "bWOzn",
+                      "name": "同步占位符",
+                      "fill": "#888888",
+                      "content": "选择目标模块...",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "wIVAf",
+              "name": "当前文本",
+              "width": 248,
+              "height": 400,
+              "fill": "#2d2d3f",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "UZ4Xz",
+                  "name": "当前文本标签",
+                  "fill": "#e0e0e0",
+                  "content": "📝 当前文本",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "1OmLD",
+                  "name": "文本内容区",
+                  "width": 224,
+                  "height": 340,
+                  "fill": "#3d3d5c",
+                  "cornerRadius": 6,
+                  "padding": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "C4P0J",
+                      "name": "示例文本",
+                      "fill": "#888888",
+                      "textGrowth": "fixed-width",
+                      "width": 200,
+                      "content": "[AI 返回的文本内容将显示在这里...]",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "V0fbT",
+              "name": "历史版本",
+              "width": 248,
+              "height": 280,
+              "fill": "#2d2d3f",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "hdgEP",
+                  "name": "历史版本标签",
+                  "fill": "#e0e0e0",
+                  "content": "📚 历史版本",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "d0eWx",
+                  "name": "历史版本列表",
+                  "width": 224,
+                  "height": 220,
+                  "fill": "#3d3d5c",
+                  "cornerRadius": 6,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "sjF09",
+                      "name": "版本1",
+                      "fill": "#e0e0e0",
+                      "content": "▶ 10:05 版本 1",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "43E85",
+                      "name": "版本2",
+                      "fill": "#e0e0e0",
+                      "content": "▶ 10:03 版本 2",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "llllS",
+                      "name": "版本3",
+                      "fill": "#e0e0e0",
+                      "content": "▶ 09:58 版本 3",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "CKJvW",
+          "name": "中间工作区",
+          "width": 800,
+          "height": 900,
+          "fill": "#0f0f23",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "uFd5i",
+              "name": "工作区标题",
+              "width": 800,
+              "height": 60,
+              "fill": "#1e1e2e",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "qagkb",
+                  "name": "工作区标题文字",
+                  "fill": "#888888",
+                  "content": "点击右侧「新建」创建文本模块",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ub9kc",
+              "name": "工作区内容",
+              "width": 800,
+              "height": 840,
+              "fill": "#0f0f23",
+              "gap": 24,
+              "padding": 32,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "N2BdP",
+                  "name": "示例模块1",
+                  "width": 340,
+                  "height": 500,
+                  "fill": "#2d2d3f",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "957HC",
+                      "name": "模块1标题栏",
+                      "width": 308,
+                      "height": 40,
+                      "fill": "#3d3d5c",
+                      "cornerRadius": 8,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i96U9",
+                          "name": "模块1标题文字",
+                          "fill": "#ffffff",
+                          "content": "文本模块 1",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "1sRIe",
+                          "name": "模块1关闭按钮",
+                          "fill": "#888888",
+                          "content": "×",
+                          "fontFamily": "Inter",
+                          "fontSize": 20,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DNXvQ",
+                      "name": "模块1内容",
+                      "width": 308,
+                      "height": 420,
+                      "fill": "#1e1e2e",
+                      "cornerRadius": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "t5o2G",
+                          "name": "模块1示例内容",
+                          "fill": "#a0a0a0",
+                          "textGrowth": "fixed-width",
+                          "width": 284,
+                          "content": "模块 1 内容\n\n[AI 生成的文本将显示在这里...]",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "N1VpP",
+          "name": "右侧面板",
+          "width": 320,
+          "height": 900,
+          "fill": "#1e1e2e",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "HYYcZ",
+              "name": "新建按钮",
+              "width": 288,
+              "height": 48,
+              "fill": "#6366f1",
+              "cornerRadius": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "yE7pm",
+                  "name": "新建按钮文字",
+                  "fill": "#ffffff",
+                  "content": "➕ 新建",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "iVFWh",
+              "name": "对话历史",
+              "width": 288,
+              "height": 450,
+              "fill": "#2d2d3f",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "FP6ti",
+                  "name": "对话历史标签",
+                  "fill": "#e0e0e0",
+                  "content": "💬 对话历史",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "UXw59",
+                  "name": "对话历史容器",
+                  "width": 264,
+                  "height": 390,
+                  "fill": "#3d3d5c",
+                  "cornerRadius": 6,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "pSqvf",
+                      "name": "用户消息1",
+                      "width": 240,
+                      "fill": "#4d4d6a",
+                      "cornerRadius": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "X2oAA",
+                          "name": "用户消息1文字",
+                          "fill": "#ffffff",
+                          "textGrowth": "fixed-width",
+                          "width": 216,
+                          "content": "用户: 帮我写一篇...",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "potoJ",
+                      "name": "AI消息1",
+                      "width": 240,
+                      "fill": "#6366f1",
+                      "cornerRadius": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "gOROp",
+                          "name": "AI消息1文字",
+                          "fill": "#ffffff",
+                          "textGrowth": "fixed-width",
+                          "width": 216,
+                          "content": "AI: 好的，这是一篇...",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qxJCd",
+              "name": "模型选择区",
+              "width": 288,
+              "height": 180,
+              "fill": "#2d2d3f",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "CT6Oq",
+                  "name": "模型选择标签",
+                  "fill": "#e0e0e0",
+                  "content": "🎯 发送给多个模型",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "CrqOj",
+                  "name": "模型选项",
+                  "width": 264,
+                  "height": 120,
+                  "fill": "#3d3d5c",
+                  "cornerRadius": 6,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "VCZrn",
+                      "name": "模型1",
+                      "width": 240,
+                      "height": 32,
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "GlCJ5",
+                          "name": "模型1勾选",
+                          "fill": "#6366f1",
+                          "content": "[✓]",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "osGJT",
+                          "name": "模型1名称",
+                          "fill": "#ffffff",
+                          "content": "qwen3.5:35b",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "f0Svv",
+                      "name": "模型2",
+                      "width": 240,
+                      "height": 32,
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "2EM5V",
+                          "name": "模型2勾选",
+                          "fill": "#a0a0a0",
+                          "content": "[ ]",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "QX22U",
+                          "name": "模型2名称",
+                          "fill": "#ffffff",
+                          "content": "gpt-4o",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "9wWlQ",
+                      "name": "模型3",
+                      "width": 240,
+                      "height": 32,
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "66cnj",
+                          "name": "模型3勾选",
+                          "fill": "#6366f1",
+                          "content": "[✓]",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "07OPj",
+                          "name": "模型3名称",
+                          "fill": "#ffffff",
+                          "content": "claude-3.5-sonnet",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "FdTTX",
+              "name": "输入区",
+              "width": 288,
+              "height": 100,
+              "fill": "#2d2d3f",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "J6Ess",
+                  "name": "输入框",
+                  "width": 264,
+                  "height": 50,
+                  "fill": "#3d3d5c",
+                  "cornerRadius": 6,
+                  "layout": "vertical",
+                  "padding": 12,
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "xklcB",
+                      "name": "输入占位符",
+                      "fill": "#888888",
+                      "content": "输入消息...",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "zV4Wb",
+                  "name": "发送按钮行",
+                  "width": 264,
+                  "height": 30,
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "6c5XG",
+                      "name": "发送按钮",
+                      "width": 80,
+                      "height": 30,
+                      "fill": "#6366f1",
+                      "cornerRadius": 6,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "rofZP",
+                          "name": "发送按钮文字",
+                          "fill": "#ffffff",
+                          "content": "发送 📤",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

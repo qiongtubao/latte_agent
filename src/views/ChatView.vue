@@ -4,6 +4,14 @@
  * 实现与 AI 的交互功能，支持意图识别、命令建议和执行
  */
 import { ref, nextTick, inject, onMounted, onUnmounted } from 'vue'
+import EmailForm from '../components/email/EmailForm.vue'
+
+/**
+ * 技能触发词映射
+ */
+const skillTriggers: Record<string, string[]> = {
+  'send-email': ['/发邮件', '/发送邮件', '/send mail', '/email', '发邮件', '发送邮件']
+}
 
 /**
  * 消息类型定义
@@ -45,6 +53,59 @@ const messagesRef = ref<HTMLElement | null>(null)
 const requestCommandConfirm = inject<(command: string) => void>('requestCommandConfirm')
 
 /**
+ * 是否显示邮件表单
+ */
+const showEmailForm = ref(false)
+
+/**
+ * 检测技能触发
+ */
+const detectSkillTrigger = (input: string): string | null => {
+  const lower = input.toLowerCase()
+  
+  // 检测邮件技能
+  for (const trigger of skillTriggers['send-email']) {
+    if (lower.includes(trigger.toLowerCase())) {
+      return 'send-email'
+    }
+  }
+  
+  return null
+}
+
+/**
+ * 打开邮件表单
+ */
+const openEmailForm = () => {
+  showEmailForm.value = true
+}
+
+/**
+ * 处理邮件发送
+ */
+const handleEmailSend = (data: { to: string; subject: string; content: string; attachments: string[] }) => {
+  // 构建命令
+  let command = `latte-send-mail --to "${data.to}" --subject "${data.subject}" --content "${data.content}"`
+  
+  if (data.attachments.length > 0) {
+    command += ` --attach "${data.attachments.join('" --attach "')}"`
+  }
+  
+  showEmailForm.value = false
+  
+  // 添加系统消息
+  messages.value.push({
+    role: 'system',
+    content: `📧 邮件已准备好，点击确认执行发送命令`
+  })
+  
+  // 触发命令确认
+  if (requestCommandConfirm) {
+    requestCommandConfirm(command)
+  }
+}
+
+/**
  * 滚动到消息底部
  */
 const scrollToBottom = (): void => {
@@ -72,6 +133,16 @@ const sendMessage = async (): Promise<void> => {
   if (!inputText.value.trim() || isLoading.value) return
   
   const userInput = inputText.value.trim()
+  
+  // 检测是否触发技能
+  const triggeredSkill = detectSkillTrigger(userInput)
+  if (triggeredSkill === 'send-email') {
+    inputText.value = ''
+    messages.value.push({ role: 'user', content: userInput })
+    openEmailForm()
+    scrollToBottom()
+    return
+  }
   
   // 添加用户消息
   messages.value.push({ role: 'user', content: userInput })
@@ -220,6 +291,13 @@ onMounted(() => {
         发送
       </button>
     </div>
+    
+    <!-- 邮件发送表单弹窗 -->
+    <EmailForm 
+      v-if="showEmailForm"
+      @send="handleEmailSend"
+      @cancel="showEmailForm = false"
+    />
   </div>
 </template>
 

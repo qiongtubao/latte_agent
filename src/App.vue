@@ -13,12 +13,13 @@ import DiagramView from './views/DiagramView.vue'
 import MarkdownView from './views/MarkdownView.vue'
 import ImageEditorView from './views/ImageEditorView.vue'
 import Model3DView from './views/Model3DView.vue'
+import AiTextEditorView from './views/AiTextEditorView.vue'
 import ConfirmModal from './components/ConfirmModal.vue'
 
 /**
  * 导航标签类型
  */
-type TabId = 'chat' | 'skills' | 'tasks' | 'test' | 'code' | 'diagram' | 'markdown' | 'image' | 'model3d'
+type TabId = 'chat' | 'skills' | 'tasks' | 'test' | 'code' | 'diagram' | 'markdown' | 'image' | 'model3d' | 'aitext'
 
 /**
  * 导航标签配置
@@ -49,6 +50,7 @@ const pendingCommand = ref('')
  */
 const tabs: Tab[] = [
   { id: 'chat', name: '对话', icon: '💬' },
+  { id: 'aitext', name: 'AI写作', icon: '✍️' },
   { id: 'code', name: '代码', icon: '💻' },
   { id: 'diagram', name: '图表', icon: '🎨' },
   { id: 'markdown', name: '文档', icon: '📝' },
@@ -124,6 +126,7 @@ provide('requestCommandConfirm', requestCommandConfirm)
         <MarkdownView v-else-if="currentTab === 'markdown'" />
         <ImageEditorView v-else-if="currentTab === 'image'" />
         <Model3DView v-else-if="currentTab === 'model3d'" />
+        <AiTextEditorView v-else-if="currentTab === 'aitext'" />
         <SkillsView v-else-if="currentTab === 'skills'" />
         <TasksView v-else-if="currentTab === 'tasks'" />
         <TestView v-else-if="currentTab === 'test'" />
