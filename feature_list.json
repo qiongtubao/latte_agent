@@ -1,0 +1,152 @@
+[
+  {
+    "id": "F001",
+    "category": "Core",
+    "priority": 1,
+    "description": "Electron + Vue3 应用框架初始化，主窗口可正常显示",
+    "steps": [
+      "执行 npm run dev 启动开发服务器",
+      "验证应用窗口在端口 3000 正常打开",
+      "验证窗口标题显示为 latte_agent"
+    ],
+    "tests": [
+      "启动应用后窗口可见且无白屏",
+      "开发者工具中 Vue DevTools 可检测到 Vue3 实例",
+      "窗口尺寸默认 1200x800 且可调整"
+    ],
+    "passes": true,
+    "designRef": "对话主界面"
+  },
+  {
+    "id": "F002",
+    "category": "Core",
+    "priority": 2,
+    "description": "IPC 通信层：渲染进程与主进程双向通信",
+    "steps": [
+      "定义 IPC 通道类型 src/shared/ipc.ts",
+      "实现主进程 IPC 处理器 src/main/ipc/handlers.ts",
+      "实现渲染进程 IPC 客户端 src/renderer/ipc/client.ts",
+      "测试双向通信 ping/pong"
+    ],
+    "tests": [
+      "渲染进程发送 ping 主进程返回 pong",
+      "主进程可主动向渲染进程推送事件",
+      "IPC 消息类型安全（TypeScript）"
+    ],
+    "passes": false,
+    "designRef": ""
+  },
+  {
+    "id": "F003",
+    "category": "Core",
+    "priority": 3,
+    "description": "AI 客户端统一接口，支持 Claude API 调用",
+    "steps": [
+      "创建 AI 客户端抽象接口 src/ai/client.ts",
+      "实现 Claude API 对接 src/ai/anthropic.ts",
+      "在设置页配置 API 密钥",
+      "发送测试消息验证响应"
+    ],
+    "tests": [
+      "未配置密钥时提示用户前往设置",
+      "配置有效密钥后可正常调用 Claude API",
+      "响应中包含 usage.input_tokens 和 usage.output_tokens"
+    ],
+    "passes": false,
+    "designRef": "设置页面"
+  },
+  {
+    "id": "F004",
+    "category": "Core",
+    "priority": 4,
+    "description": "AI 响应流式输出：逐字显示响应内容",
+    "steps": [
+      "实现 SSE 流式响应解析",
+      "在对话界面实时渲染流式输出",
+      "添加停止生成按钮"
+    ],
+    "tests": [
+      "响应内容逐字显示而非一次性出现",
+      "流式输出过程中可点击停止",
+      "输出完成后统计信息更新"
+    ],
+    "passes": false,
+    "designRef": "对话主界面"
+  },
+  {
+    "id": "F005",
+    "category": "UI",
+    "priority": 5,
+    "description": "对话主界面：消息输入、消息列表、AI 响应渲染",
+    "steps": [
+      "创建 ChatWindow.vue 组件实现三栏布局",
+      "消息区渲染用户消息和 AI 回复",
+      "输入区支持文本输入和发送",
+      "AI 响应支持 Markdown 渲染"
+    ],
+    "tests": [
+      "输入框支持回车发送",
+      "消息列表自动滚动到最新",
+      "Markdown 代码块语法高亮"
+    ],
+    "passes": false,
+    "designRef": "对话主界面"
+  },
+  {
+    "id": "F006",
+    "category": "UI",
+    "priority": 6,
+    "description": "侧边栏导航：会话列表、新建对话、切换会话",
+    "steps": [
+      "创建 Sidebar.vue 组件",
+      "显示会话列表（标题、时间、模型）",
+      "点击会话切换对话内容",
+      "新建对话按钮"
+    ],
+    "tests": [
+      "会话列表按时间倒序排列",
+      "当前会话高亮显示",
+      "悬停显示删除按钮"
+    ],
+    "passes": false,
+    "designRef": "对话主界面"
+  },
+  {
+    "id": "F007",
+    "category": "Data",
+    "priority": 7,
+    "description": "对话历史 JSON 持久化，重启后可恢复",
+    "steps": [
+      "定义会话数据结构 src/storage/types.ts",
+      "实现 JSON 文件存储 src/storage/session.ts",
+      "应用启动时加载历史会话",
+      "每次消息后自动保存"
+    ],
+    "tests": [
+      "发送消息后关闭应用，重新打开消息仍存在",
+      "多会话各自独立保存和恢复",
+      "JSON 结构包含 sessionId、messages、timestamp"
+    ],
+    "passes": false,
+    "designRef": "对话主界面"
+  },
+  {
+    "id": "F008",
+    "category": "Error Handling",
+    "priority": 8,
+    "description": "API 错误处理：网络异常、认证失败、配额超限",
+    "steps": [
+      "捕获 API 错误并分类（网络/认证/配额）",
+      "网络错误显示重试按钮",
+      "认证失败提示检查密钥",
+      "配额超限提示升级或等待"
+    ],
+    "tests": [
+      "断开网络后发送消息显示重试按钮",
+      "使用无效密钥显示认证错误提示",
+      "错误信息用户友好、可操作"
+    ],
+    "passes": false,
+    "designRef": "对话主界面"
+  }
+]

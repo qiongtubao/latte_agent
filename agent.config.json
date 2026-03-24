@@ -1,0 +1,9 @@
+{
+  "name": "latte_agent",
+  "description": "AI 工作台 —— 以对话为核心，通过可插拔技能插件实现无限扩展的 AI 辅助执行平台。技术栈：TypeScript + Electron + Vue3",
+  "techStack": "TypeScript + Electron + Vue3",
+  "port": 3000,
+  "model": "claude-sonnet-4-5",
+  "maxTokensPerSession": 8000,
+  "executor": "claude-code"
+}

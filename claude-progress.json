@@ -1,0 +1,24 @@
+{
+  "sessions": [
+    {
+      "id": "session-001",
+      "date": "2026-03-24",
+      "featureId": "F001",
+      "summary": "初始化 Electron + Vue3 + TypeScript + Vite 项目框架",
+      "filesChanged": [
+        "package.json",
+        "tsconfig.json",
+        "vite.config.ts",
+        "index.html",
+        "init.sh",
+        ".gitignore",
+        "src/env.d.ts",
+        "src/main/index.ts",
+        "src/preload/index.ts",
+        "src/renderer/App.vue",
+        "src/renderer/main.ts"
+      ],
+      "nextFeature": "F002"
+    }
+  ]
+}
