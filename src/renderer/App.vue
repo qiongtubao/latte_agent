@@ -1,7 +1,35 @@
 <template>
   <div id="app">
-    <!-- 对话主界面（默认视图） -->
-    <ChatWindow v-if="view === 'chat'" @open-settings="view = 'settings'" />
+    <!-- 主布局：侧边栏 + 主内容区 -->
+    <template v-if="view === 'chat'">
+      <div class="main-layout">
+        <!-- 侧边栏 -->
+        <Sidebar
+          :sessions="sortedSessions"
+          :activeSessionId="activeSessionId"
+          @newChat="createSession"
+          @switchSession="switchSession"
+          @deleteSession="deleteSession"
+        />
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+          <!-- 对话主界面 -->
+          <ChatWindow
+            v-if="activeSessionId"
+            :messages="activeMessages"
+            @openSettings="view = 'settings'"
+            @messagesChange="onMessagesChange"
+          />
+
+          <!-- 无活跃会话时提示新建 -->
+          <div v-else class="no-session-hint">
+            <p>选择一个对话或新建对话</p>
+            <button class="primary-btn" @click="createSession">新建对话</button>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <!-- 设置面板（覆盖层） -->
     <div v-else-if="view === 'settings'" class="settings-overlay">
@@ -44,16 +72,103 @@
 <script setup lang="ts">
 /**
  * App 根组件
- * 应用入口视图，默认显示对话主界面
+ * 应用入口视图，管理会话状态和视图切换
  */
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { invoke, on } from './ipc/client'
 import { IpcChannel } from '@shared/ipc'
+import { generateSessionId } from '@shared/session'
+import type { Session, ChatMessage } from '@shared/session'
 import ChatWindow from './components/ChatWindow.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
+import Sidebar from './components/Sidebar.vue'
 
 // 视图切换：chat（默认）、settings、ipc（开发调试）
 const view = ref<'chat' | 'settings' | 'ipc'>('chat')
+
+// ==================== 会话管理 ====================
+
+/** 所有会话列表 */
+const sessions = ref<Session[]>([])
+/** 当前活跃会话 ID */
+const activeSessionId = ref<string | null>(null)
+
+/** 会话列表按更新时间倒序排列 */
+const sortedSessions = computed(() =>
+  [...sessions.value].sort((a, b) => b.updatedAt - a.updatedAt)
+)
+
+/** 当前活跃会话 */
+const activeSession = computed(() =>
+  sessions.value.find(s => s.id === activeSessionId.value) ?? null
+)
+
+/** 当前会话的消息列表 */
+const activeMessages = computed<ChatMessage[]>(
+  () => activeSession.value?.messages ?? []
+)
+
+/**
+ * 创建新会话
+ */
+function createSession(): void {
+  const session: Session = {
+    id: generateSessionId(),
+    title: '新对话',
+    model: '',
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    messages: [],
+  }
+  sessions.value.push(session)
+  activeSessionId.value = session.id
+}
+
+/**
+ * 切换到指定会话
+ */
+function switchSession(id: string): void {
+  activeSessionId.value = id
+}
+
+/**
+ * 删除指定会话
+ */
+function deleteSession(id: string): void {
+  const index = sessions.value.findIndex(s => s.id === id)
+  if (index === -1) return
+
+  sessions.value.splice(index, 1)
+
+  // 如果删除的是当前会话，切换到最近的会话
+  if (activeSessionId.value === id) {
+    activeSessionId.value = sortedSessions.value.length > 0
+      ? sortedSessions.value[0].id
+      : null
+  }
+}
+
+/**
+ * 消息列表更新回调（来自 ChatWindow）
+ */
+function onMessagesChange(updatedMessages: ChatMessage[]): void {
+  if (!activeSession.value) return
+
+  // 更新会话消息
+  activeSession.value.messages = updatedMessages
+  activeSession.value.updatedAt = Date.now()
+
+  // 根据第一条用户消息自动设置标题
+  if (activeSession.value.title === '新对话') {
+    const firstUserMsg = updatedMessages.find(m => m.role === 'user')
+    if (firstUserMsg) {
+      activeSession.value.title = firstUserMsg.content.slice(0, 30) +
+        (firstUserMsg.content.length > 30 ? '...' : '')
+    }
+  }
+}
+
+// ==================== IPC 测试 ====================
 
 // IPC 测试状态
 const loading = ref(false)
@@ -119,6 +234,44 @@ body {
   width: 100%;
   height: 100vh;
   overflow: hidden;
+}
+
+/* 主布局：侧边栏 + 内容区 */
+.main-layout {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* 无会话提示 */
+.no-session-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 1rem;
+  color: #5a6a7a;
+}
+
+.primary-btn {
+  background: #e94560;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.primary-btn:hover {
+  background: #ff6b8a;
 }
 
 /* 设置面板覆盖层 */

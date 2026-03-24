@@ -125,14 +125,23 @@
  * 三栏布局：头部 + 消息列表 + 输入区
  * 支持 Markdown 渲染、代码语法高亮、流式输出
  */
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { invoke, on } from '../ipc/client'
 import { IpcChannel, StreamChunkData } from '@shared/ipc'
+import type { ChatMessage } from '@shared/session'
 import { marked, type Tokens } from 'marked'
 import hljs from 'highlight.js'
 
-// 事件定义
-defineEmits<{ openSettings: [] }>()
+// Props：从父组件接收消息列表
+const props = defineProps<{
+  messages: ChatMessage[]
+}>()
+
+// 事件：向父组件通知消息变化
+const emit = defineEmits<{
+  openSettings: []
+  messagesChange: [messages: ChatMessage[]]
+}>()
 
 /**
  * 自定义渲染器：代码块使用 highlight.js 语法高亮
@@ -153,15 +162,8 @@ marked.setOptions({
   gfm: true, // 启用 GitHub 风格 Markdown
 })
 
-// 消息类型定义
-interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
-}
-
 // 状态
 const hasKey = ref(false)
-const messages = ref<ChatMessage[]>([])
 const inputText = ref('')
 const loading = ref(false)
 const isStreaming = ref(false)
@@ -201,6 +203,13 @@ async function checkApiKey(): Promise<void> {
 }
 
 /**
+ * 通知父组件消息列表已更新
+ */
+function notifyMessagesUpdate(updatedMessages: ChatMessage[]): void {
+  emit('messagesChange', updatedMessages)
+}
+
+/**
  * 监听流式数据块
  */
 function setupStreamListener(): void {
@@ -231,10 +240,11 @@ function setupStreamListener(): void {
     } else if (data.type === 'message_stop') {
       // 消息结束，将流式内容添加到消息列表
       if (streamingContent.value) {
-        messages.value.push({
-          role: 'assistant',
+        const updated = [...props.messages, {
+          role: 'assistant' as const,
           content: streamingContent.value,
-        })
+        }]
+        notifyMessagesUpdate(updated)
       }
       streamingContent.value = ''
       isStreaming.value = false
@@ -258,8 +268,9 @@ async function sendMessage(): Promise<void> {
   streamingContent.value = ''
   inputText.value = ''
 
-  // 添加用户消息到列表
-  messages.value.push({ role: 'user', content: text })
+  // 添加用户消息，通知父组件
+  const updated = [...props.messages, { role: 'user' as const, content: text }]
+  notifyMessagesUpdate(updated)
   scrollToBottom()
 
   try {
@@ -281,10 +292,11 @@ async function stopStream(): Promise<void> {
   try {
     await invoke(IpcChannel.AI_STOP_STREAM)
     if (streamingContent.value) {
-      messages.value.push({
-        role: 'assistant',
+      const updated = [...props.messages, {
+        role: 'assistant' as const,
         content: streamingContent.value + '\n\n*[已停止]*',
-      })
+      }]
+      notifyMessagesUpdate(updated)
     }
     streamingContent.value = ''
     isStreaming.value = false
@@ -324,6 +336,13 @@ function focusInput(): void {
     inputRef.value?.focus()
   })
 }
+
+/**
+ * 当消息列表变化时（切换会话），滚动到底部
+ */
+watch(() => props.messages.length, () => {
+  scrollToBottom()
+})
 
 onMounted(() => {
   checkApiKey()

@@ -108,7 +108,7 @@
       "当前会话高亮显示",
       "悬停显示删除按钮"
     ],
-    "passes": false,
+    "passes": true,
     "designRef": "对话主界面"
   },
   {
