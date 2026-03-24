@@ -1,3 +1,5 @@
+import type { Session } from './session'
+
 /**
  * IPC 通道类型定义
  * 定义主进程与渲染进程之间的双向通信接口
@@ -27,6 +29,11 @@ export const IpcChannel = {
   NOTIFICATION: 'ipc:notification',
   LOG: 'ipc:log',
   AI_STREAM_CHUNK: 'ai:stream-chunk', // 流式数据块
+
+  // 会话持久化通道
+  SESSION_LOAD_ALL: 'session:load-all',       // 加载所有历史会话
+  SESSION_SAVE: 'session:save',               // 保存单个会话
+  SESSION_DELETE: 'session:delete',           // 删除单个会话
 } as const
 
 /**
@@ -89,6 +96,9 @@ export interface IpcRequestMap {
   [IpcChannel.SETTINGS_GET]: void
   [IpcChannel.SETTINGS_SET]: Partial<SettingsData> & { apiKey?: string }
   [IpcChannel.SETTINGS_HAS_KEY]: void
+  [IpcChannel.SESSION_LOAD_ALL]: void
+  [IpcChannel.SESSION_SAVE]: { session: Session }
+  [IpcChannel.SESSION_DELETE]: { sessionId: string }
 }
 
 /**
@@ -105,6 +115,9 @@ export interface IpcResponseMap {
   [IpcChannel.SETTINGS_GET]: SettingsData
   [IpcChannel.SETTINGS_SET]: SettingsData
   [IpcChannel.SETTINGS_HAS_KEY]: { hasKey: boolean }
+  [IpcChannel.SESSION_LOAD_ALL]: { sessions: Session[] }
+  [IpcChannel.SESSION_SAVE]: { success: boolean }
+  [IpcChannel.SESSION_DELETE]: { success: boolean }
 }
 
 /**

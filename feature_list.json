@@ -127,7 +127,7 @@
       "多会话各自独立保存和恢复",
       "JSON 结构包含 sessionId、messages、timestamp"
     ],
-    "passes": false,
+    "passes": true,
     "designRef": "对话主界面"
   },
   {

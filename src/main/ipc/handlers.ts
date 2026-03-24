@@ -14,6 +14,7 @@ import {
 } from '@shared/ipc'
 import { createClient, AIClient } from '@main/ai/client'
 import { readSettings, writeSettings, hasApiKey, getFullSettings } from '@main/storage/settings'
+import { loadAllSessions, saveSession, deleteSession } from '@main/storage/session'
 
 // AI 客户端实例缓存
 let aiClientInstance: AIClient | null = null
@@ -226,6 +227,34 @@ export function registerIpcHandlers(): void {
     IpcChannel.SETTINGS_HAS_KEY,
     (): IpcResponseData<typeof IpcChannel.SETTINGS_HAS_KEY> => {
       return { hasKey: hasApiKey() }
+    }
+  )
+
+  // ===== 会话持久化通道 =====
+
+  // 加载所有历史会话
+  ipcMain.handle(
+    IpcChannel.SESSION_LOAD_ALL,
+    (): IpcResponseData<typeof IpcChannel.SESSION_LOAD_ALL> => {
+      return { sessions: loadAllSessions() }
+    }
+  )
+
+  // 保存单个会话
+  ipcMain.handle(
+    IpcChannel.SESSION_SAVE,
+    (_event, params: IpcRequestParams<typeof IpcChannel.SESSION_SAVE>): IpcResponseData<typeof IpcChannel.SESSION_SAVE> => {
+      saveSession(params.session)
+      return { success: true }
+    }
+  )
+
+  // 删除单个会话
+  ipcMain.handle(
+    IpcChannel.SESSION_DELETE,
+    (_event, params: IpcRequestParams<typeof IpcChannel.SESSION_DELETE>): IpcResponseData<typeof IpcChannel.SESSION_DELETE> => {
+      const deleted = deleteSession(params.sessionId)
+      return { success: deleted }
     }
   )
 }

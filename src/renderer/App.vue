@@ -74,7 +74,7 @@
  * App 根组件
  * 应用入口视图，管理会话状态和视图切换
  */
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { invoke, on } from './ipc/client'
 import { IpcChannel } from '@shared/ipc'
 import { generateSessionId } from '@shared/session'
@@ -109,6 +109,17 @@ const activeMessages = computed<ChatMessage[]>(
 )
 
 /**
+ * 将会话持久化到主进程存储
+ */
+async function persistSession(session: Session): Promise<void> {
+  try {
+    await invoke(IpcChannel.SESSION_SAVE, { session: { ...session } })
+  } catch (e) {
+    console.error('保存会话失败:', e)
+  }
+}
+
+/**
  * 创建新会话
  */
 function createSession(): void {
@@ -122,6 +133,8 @@ function createSession(): void {
   }
   sessions.value.push(session)
   activeSessionId.value = session.id
+  // 持久化新会话
+  persistSession(session)
 }
 
 /**
@@ -134,11 +147,18 @@ function switchSession(id: string): void {
 /**
  * 删除指定会话
  */
-function deleteSession(id: string): void {
+async function deleteSession(id: string): Promise<void> {
   const index = sessions.value.findIndex(s => s.id === id)
   if (index === -1) return
 
   sessions.value.splice(index, 1)
+
+  // 从持久化存储中删除
+  try {
+    await invoke(IpcChannel.SESSION_DELETE, { sessionId: id })
+  } catch (e) {
+    console.error('删除会话失败:', e)
+  }
 
   // 如果删除的是当前会话，切换到最近的会话
   if (activeSessionId.value === id) {
@@ -166,9 +186,29 @@ function onMessagesChange(updatedMessages: ChatMessage[]): void {
         (firstUserMsg.content.length > 30 ? '...' : '')
     }
   }
+
+  // 自动保存会话到持久化存储
+  persistSession(activeSession.value)
 }
 
 // ==================== IPC 测试 ====================
+
+/**
+ * 应用启动时加载历史会话
+ */
+onMounted(async () => {
+  try {
+    const result = await invoke(IpcChannel.SESSION_LOAD_ALL)
+    if (result.sessions.length > 0) {
+      sessions.value = result.sessions
+      // 激活最近更新的会话
+      const latest = result.sessions.sort((a, b) => b.updatedAt - a.updatedAt)[0]
+      activeSessionId.value = latest.id
+    }
+  } catch (e) {
+    console.error('加载历史会话失败:', e)
+  }
+})
 
 // IPC 测试状态
 const loading = ref(false)
