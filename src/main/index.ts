@@ -5,6 +5,7 @@
 
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
+import { registerIpcHandlers } from './ipc/handlers'
 
 // 主窗口引用，防止被垃圾回收
 let mainWindow: BrowserWindow | null = null
@@ -41,6 +42,9 @@ function createMainWindow(): void {
     mainWindow = null
   })
 }
+
+// 注册 IPC 处理器
+registerIpcHandlers()
 
 // Electron 就绪后创建窗口
 app.whenReady().then(() => {

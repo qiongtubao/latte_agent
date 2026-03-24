@@ -12,6 +12,25 @@ export default defineConfig({
       {
         // 主进程入口
         entry: 'src/main/index.ts',
+        onstart(args) {
+          args.reload()
+        },
+        vite: {
+          build: {
+            outDir: 'dist-electron/main',
+            rollupOptions: {
+              output: {
+                entryFileNames: 'index.js',
+              },
+            },
+          },
+          resolve: {
+            alias: {
+              '@shared': resolve(__dirname, 'src/shared'),
+              '@main': resolve(__dirname, 'src/main'),
+            },
+          },
+        },
       },
       {
         // 预加载脚本入口
@@ -19,6 +38,21 @@ export default defineConfig({
         onstart(args) {
           // 重新加载渲染进程
           args.reload()
+        },
+        vite: {
+          build: {
+            outDir: 'dist-electron/preload',
+            rollupOptions: {
+              output: {
+                entryFileNames: 'index.js',
+              },
+            },
+          },
+          resolve: {
+            alias: {
+              '@shared': resolve(__dirname, 'src/shared'),
+            },
+          },
         },
       },
     ]),
