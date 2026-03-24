@@ -10,7 +10,56 @@ import {
   IpcResponseData,
   IpcEventChannel,
   IpcEventData,
+  StreamChunkData,
 } from '@shared/ipc'
+import { createClient, AIClient } from '@main/ai/client'
+import { readSettings, writeSettings, hasApiKey, getFullSettings } from '@main/storage/settings'
+
+// AI 客户端实例缓存
+let aiClientInstance: AIClient | null = null
+
+// 当前流式请求的 AbortController
+let currentStreamController: AbortController | null = null
+
+/**
+ * 获取或创建 AI 客户端实例
+ */
+function getAIClient(): AIClient {
+  if (!aiClientInstance) {
+    const settings = getFullSettings()
+    if (!settings.apiKey) {
+      throw new Error('API 密钥未配置，请前往设置页面配置')
+    }
+    aiClientInstance = createClient(settings.aiProvider, {
+      apiKey: settings.apiKey,
+      model: settings.defaultModel,
+      maxTokens: settings.maxTokens,
+      temperature: settings.temperature,
+    })
+  }
+  return aiClientInstance
+}
+
+/**
+ * 重置 AI 客户端实例（设置变更时调用）
+ */
+function resetAIClient(): void {
+  aiClientInstance = null
+}
+
+/**
+ * 将完整设置转为安全数据（不含密钥）
+ */
+function toSafeSettings() {
+  const settings = readSettings()
+  return {
+    aiProvider: settings.aiProvider,
+    defaultModel: settings.defaultModel,
+    maxTokens: settings.maxTokens,
+    temperature: settings.temperature,
+    hasApiKey: Boolean(settings.apiKey),
+  }
+}
 
 /**
  * 注册所有 IPC 处理器
@@ -37,6 +86,146 @@ export function registerIpcHandlers(): void {
         version: app.getVersion(),
         platform: process.platform,
       }
+    }
+  )
+
+  // ===== AI 相关通道 =====
+
+  // 发送消息到 AI
+  ipcMain.handle(
+    IpcChannel.AI_SEND_MESSAGE,
+    async (_event, params: IpcRequestParams<typeof IpcChannel.AI_SEND_MESSAGE>): Promise<IpcResponseData<typeof IpcChannel.AI_SEND_MESSAGE>> => {
+      const client = getAIClient()
+      const response = await client.sendMessage(params.messages, {
+        model: params.model,
+      })
+      return {
+        content: response.content,
+        inputTokens: response.inputTokens,
+        outputTokens: response.outputTokens,
+        model: response.model,
+        timestamp: response.timestamp,
+      }
+    }
+  )
+
+  // 流式发送消息到 AI
+  ipcMain.handle(
+    IpcChannel.AI_SEND_MESSAGE_STREAM,
+    (event, params: IpcRequestParams<typeof IpcChannel.AI_SEND_MESSAGE_STREAM>): IpcResponseData<typeof IpcChannel.AI_SEND_MESSAGE_STREAM> => {
+      const client = getAIClient()
+      const window = BrowserWindow.fromWebContents(event.sender)
+
+      // 生成唯一流 ID
+      const streamId = `stream-${Date.now()}`
+
+      // 如果已有正在进行的流，先停止
+      if (currentStreamController) {
+        currentStreamController.abort()
+        currentStreamController = null
+      }
+
+      // 创建流式请求
+      currentStreamController = client.sendMessageStream(
+        params.messages,
+        (chunk) => {
+          // 通过 IPC 事件将数据块发送到渲染进程
+          if (window) {
+            const chunkData: StreamChunkData = chunk
+            window.webContents.send(IpcChannel.AI_STREAM_CHUNK, chunkData)
+          }
+        },
+        {
+          model: params.model,
+        }
+      )
+
+      return { streamId }
+    }
+  )
+
+  // 停止流式输出
+  ipcMain.handle(
+    IpcChannel.AI_STOP_STREAM,
+    (): IpcResponseData<typeof IpcChannel.AI_STOP_STREAM> => {
+      if (currentStreamController) {
+        currentStreamController.abort()
+        currentStreamController = null
+        return { stopped: true }
+      }
+      return { stopped: false }
+    }
+  )
+
+  // 验证 API 密钥
+  ipcMain.handle(
+    IpcChannel.AI_VALIDATE_KEY,
+    async (_event, params: IpcRequestParams<typeof IpcChannel.AI_VALIDATE_KEY>): Promise<IpcResponseData<typeof IpcChannel.AI_VALIDATE_KEY>> => {
+      try {
+        const settings = getFullSettings()
+        // 使用传入的密钥或已存储的密钥创建临时客户端验证
+        const keyToValidate = params.apiKey || settings.apiKey
+        if (!keyToValidate) {
+          return { valid: false, error: '未提供 API 密钥' }
+        }
+        const client = createClient(settings.aiProvider, {
+          apiKey: keyToValidate,
+        })
+        const valid = await client.validateApiKey()
+        return { valid, error: valid ? undefined : 'API 密钥无效' }
+      } catch (e) {
+        return { valid: false, error: e instanceof Error ? e.message : '验证失败' }
+      }
+    }
+  )
+
+  // 获取可用模型列表
+  ipcMain.handle(
+    IpcChannel.AI_GET_MODELS,
+    async (): Promise<IpcResponseData<typeof IpcChannel.AI_GET_MODELS>> => {
+      const settings = readSettings()
+      try {
+        const client = createClient(settings.aiProvider, {
+          apiKey: settings.apiKey,
+        })
+        return {
+          models: client.getAvailableModels(),
+          provider: settings.aiProvider,
+        }
+      } catch {
+        return { models: [], provider: settings.aiProvider }
+      }
+    }
+  )
+
+  // ===== 设置相关通道 =====
+
+  // 获取当前设置（不含密钥）
+  ipcMain.handle(
+    IpcChannel.SETTINGS_GET,
+    (): IpcResponseData<typeof IpcChannel.SETTINGS_GET> => {
+      return toSafeSettings()
+    }
+  )
+
+  // 保存设置
+  ipcMain.handle(
+    IpcChannel.SETTINGS_SET,
+    (_event, params: IpcRequestParams<typeof IpcChannel.SETTINGS_SET>): IpcResponseData<typeof IpcChannel.SETTINGS_SET> => {
+      writeSettings(params)
+      // 如果密钥变更，重置 AI 客户端
+      if (params.apiKey !== undefined) {
+        resetAIClient()
+      }
+      return toSafeSettings()
+    }
+  )
+
+  // 检查是否已配置 API 密钥
+  ipcMain.handle(
+    IpcChannel.SETTINGS_HAS_KEY,
+    (): IpcResponseData<typeof IpcChannel.SETTINGS_HAS_KEY> => {
+      return { hasKey: hasApiKey() }
     }
   )
 }

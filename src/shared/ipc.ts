@@ -11,10 +11,69 @@ export const IpcChannel = {
   PING: 'ipc:ping',
   GET_APP_INFO: 'ipc:get-app-info',
 
+  // AI 相关通道
+  AI_SEND_MESSAGE: 'ai:send-message',
+  AI_SEND_MESSAGE_STREAM: 'ai:send-message-stream', // 流式消息
+  AI_STOP_STREAM: 'ai:stop-stream', // 停止流式输出
+  AI_VALIDATE_KEY: 'ai:validate-key',
+  AI_GET_MODELS: 'ai:get-models',
+
+  // 设置相关通道
+  SETTINGS_GET: 'settings:get',
+  SETTINGS_SET: 'settings:set',
+  SETTINGS_HAS_KEY: 'settings:has-key',
+
   // 主进程 -> 渲染进程 (send)
   NOTIFICATION: 'ipc:notification',
   LOG: 'ipc:log',
+  AI_STREAM_CHUNK: 'ai:stream-chunk', // 流式数据块
 } as const
+
+/**
+ * AI 消息请求参数
+ */
+export interface AISendMessageRequest {
+  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>
+  model?: string
+}
+
+/**
+ * AI 响应数据
+ */
+export interface AIResponseData {
+  content: string
+  inputTokens: number
+  outputTokens: number
+  model: string
+  timestamp: number
+}
+
+/**
+ * 流式数据块（主进程 -> 渲染进程）
+ */
+export interface StreamChunkData {
+  /** 数据块类型 */
+  type: 'content_block_delta' | 'message_start' | 'message_delta' | 'message_stop'
+  /** 增量文本内容 */
+  delta?: string
+  /** 输入 token 数 */
+  inputTokens?: number
+  /** 输出 token 数 */
+  outputTokens?: number
+  /** 模型标识 */
+  model?: string
+}
+
+/**
+ * 设置数据（不含敏感信息）
+ */
+export interface SettingsData {
+  aiProvider: string
+  defaultModel: string
+  maxTokens: number
+  temperature: number
+  hasApiKey: boolean
+}
 
 /**
  * IPC 请求类型映射
@@ -22,6 +81,14 @@ export const IpcChannel = {
 export interface IpcRequestMap {
   [IpcChannel.PING]: { timestamp: number }
   [IpcChannel.GET_APP_INFO]: void
+  [IpcChannel.AI_SEND_MESSAGE]: AISendMessageRequest
+  [IpcChannel.AI_SEND_MESSAGE_STREAM]: AISendMessageRequest
+  [IpcChannel.AI_STOP_STREAM]: void
+  [IpcChannel.AI_VALIDATE_KEY]: { apiKey: string }
+  [IpcChannel.AI_GET_MODELS]: void
+  [IpcChannel.SETTINGS_GET]: void
+  [IpcChannel.SETTINGS_SET]: Partial<SettingsData> & { apiKey?: string }
+  [IpcChannel.SETTINGS_HAS_KEY]: void
 }
 
 /**
@@ -30,6 +97,14 @@ export interface IpcRequestMap {
 export interface IpcResponseMap {
   [IpcChannel.PING]: { message: string; timestamp: number; echoTimestamp: number }
   [IpcChannel.GET_APP_INFO]: { name: string; version: string; platform: string }
+  [IpcChannel.AI_SEND_MESSAGE]: AIResponseData
+  [IpcChannel.AI_SEND_MESSAGE_STREAM]: { streamId: string }
+  [IpcChannel.AI_STOP_STREAM]: { stopped: boolean }
+  [IpcChannel.AI_VALIDATE_KEY]: { valid: boolean; error?: string }
+  [IpcChannel.AI_GET_MODELS]: { models: string[]; provider: string }
+  [IpcChannel.SETTINGS_GET]: SettingsData
+  [IpcChannel.SETTINGS_SET]: SettingsData
+  [IpcChannel.SETTINGS_HAS_KEY]: { hasKey: boolean }
 }
 
 /**
@@ -38,6 +113,7 @@ export interface IpcResponseMap {
 export interface IpcEventMap {
   [IpcChannel.NOTIFICATION]: { title: string; body: string; type: 'info' | 'warning' | 'error' }
   [IpcChannel.LOG]: { level: 'debug' | 'info' | 'warn' | 'error'; message: string }
+  [IpcChannel.AI_STREAM_CHUNK]: StreamChunkData
 }
 
 /**

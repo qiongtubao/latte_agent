@@ -19,6 +19,24 @@
         "src/renderer/main.ts"
       ],
       "nextFeature": "F002"
+    },
+    {
+      "id": "session-002",
+      "date": "2026-03-24",
+      "featureId": "F002",
+      "summary": "IPC 通信层：实现渲染进程与主进程类型安全的双向通信",
+      "filesChanged": [
+        "src/shared/ipc.ts",
+        "src/main/ipc/handlers.ts",
+        "src/main/index.ts",
+        "src/preload/index.ts",
+        "src/renderer/ipc/client.ts",
+        "src/renderer/ipc/types.d.ts",
+        "src/renderer/App.vue",
+        "vite.config.ts",
+        "feature_list.json"
+      ],
+      "nextFeature": "F003"
     }
   ]
 }

@@ -52,7 +52,7 @@
       "配置有效密钥后可正常调用 Claude API",
       "响应中包含 usage.input_tokens 和 usage.output_tokens"
     ],
-    "passes": false,
+    "passes": true,
     "designRef": "设置页面"
   },
   {
@@ -70,7 +70,7 @@
       "流式输出过程中可点击停止",
       "输出完成后统计信息更新"
     ],
-    "passes": false,
+    "passes": true,
     "designRef": "对话主界面"
   },
   {

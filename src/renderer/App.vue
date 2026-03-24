@@ -3,8 +3,20 @@
     <h1>Latte Agent</h1>
     <p>Electron + Vue3 应用已成功启动</p>
 
-    <!-- IPC 测试区域 -->
-    <div class="ipc-test">
+    <!-- 标签导航 -->
+    <div class="tabs">
+      <button
+        v-for="tab in tabs"
+        :key="tab.id"
+        :class="['tab', { active: activeTab === tab.id }]"
+        @click="activeTab = tab.id"
+      >
+        {{ tab.label }}
+      </button>
+    </div>
+
+    <!-- IPC 测试面板 -->
+    <div v-if="activeTab === 'ipc'" class="ipc-test">
       <h2>IPC 通信测试</h2>
       <div class="test-section">
         <button @click="testPing" :disabled="loading">测试 Ping/Pong</button>
@@ -27,19 +39,35 @@
         <strong>错误:</strong> {{ error }}
       </div>
     </div>
+
+    <!-- AI 对话测试面板 -->
+    <AITestPanel v-else-if="activeTab === 'ai'" @open-settings="activeTab = 'settings'" />
+
+    <!-- 设置面板 -->
+    <SettingsPanel v-else-if="activeTab === 'settings'" />
   </div>
 </template>
 
 <script setup lang="ts">
 /**
  * App 根组件
- * 应用入口视图，包含 IPC 通信测试
+ * 应用入口视图，包含 IPC 测试、AI 测试和设置
  */
 import { ref } from 'vue'
 import { invoke, on } from './ipc/client'
 import { IpcChannel } from '@shared/ipc'
+import AITestPanel from './components/AITestPanel.vue'
+import SettingsPanel from './components/SettingsPanel.vue'
 
-// 状态
+// 标签页
+const tabs = [
+  { id: 'ipc', label: 'IPC 测试' },
+  { id: 'ai', label: 'AI 对话' },
+  { id: 'settings', label: '设置' },
+]
+const activeTab = ref('ai') // 默认打开 AI 对话页
+
+// IPC 测试状态
 const loading = ref(false)
 const pingResult = ref<{ message: string; timestamp: number; echoTimestamp: number } | null>(null)
 const appInfo = ref<{ name: string; version: string; platform: string } | null>(null)
@@ -54,7 +82,6 @@ async function testPing(): Promise<void> {
   pingResult.value = null
 
   try {
-    // 发送 ping 请求
     pingResult.value = await invoke(IpcChannel.PING, { timestamp: Date.now() })
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
@@ -124,7 +151,38 @@ h2 {
 p {
   font-size: 1.1rem;
   color: #a0a0b0;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+/* 标签页样式 */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  background: #16213e;
+  border-radius: 8px;
+  padding: 0.3rem;
+}
+
+.tab {
+  padding: 0.5rem 1.2rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #a0a0b0;
+  background: transparent;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: #e0e0e0;
+  background: #1a2a4a;
+}
+
+.tab.active {
+  color: white;
+  background: #e94560;
 }
 
 /* IPC 测试区域样式 */
@@ -132,7 +190,6 @@ p {
   background: #16213e;
   border-radius: 12px;
   padding: 1.5rem 2rem;
-  margin-top: 1rem;
   min-width: 400px;
 }
 
