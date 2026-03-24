@@ -55,6 +55,11 @@ export interface StreamChunk {
 export type StreamCallback = (chunk: StreamChunk) => void
 
 /**
+ * 流式错误回调函数类型
+ */
+export type StreamErrorCallback = (error: Error) => void
+
+/**
  * AI 客户端配置
  */
 export interface AIClientConfig {
@@ -91,12 +96,14 @@ export interface AIClient {
    * @param messages 消息历史
    * @param onChunk 每次接收到数据块时的回调
    * @param config 可选配置覆盖
+   * @param onError 错误回调（可选）
    * @returns 返回一个 AbortController 用于取消请求
    */
   sendMessageStream(
     messages: ChatMessage[],
     onChunk: StreamCallback,
-    config?: Partial<AIClientConfig>
+    config?: Partial<AIClientConfig>,
+    onError?: StreamErrorCallback
   ): AbortController
 
   /**

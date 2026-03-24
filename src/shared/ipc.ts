@@ -29,6 +29,7 @@ export const IpcChannel = {
   NOTIFICATION: 'ipc:notification',
   LOG: 'ipc:log',
   AI_STREAM_CHUNK: 'ai:stream-chunk', // 流式数据块
+  AI_STREAM_ERROR: 'ai:stream-error', // 流式错误事件
 
   // 会话持久化通道
   SESSION_LOAD_ALL: 'session:load-all',       // 加载所有历史会话
@@ -69,6 +70,25 @@ export interface StreamChunkData {
   outputTokens?: number
   /** 模型标识 */
   model?: string
+}
+
+/**
+ * API 错误类型枚举
+ */
+export type ApiErrorType = 'network' | 'auth' | 'quota' | 'bad_request' | 'server' | 'timeout' | 'cancelled' | 'unknown'
+
+/**
+ * API 错误数据（用于 IPC 传输）
+ */
+export interface ApiErrorData {
+  /** 错误类型 */
+  type: ApiErrorType
+  /** 错误消息 */
+  message: string
+  /** 是否可重试 */
+  retryable: boolean
+  /** 操作建议 */
+  action: string
 }
 
 /**
@@ -127,6 +147,7 @@ export interface IpcEventMap {
   [IpcChannel.NOTIFICATION]: { title: string; body: string; type: 'info' | 'warning' | 'error' }
   [IpcChannel.LOG]: { level: 'debug' | 'info' | 'warn' | 'error'; message: string }
   [IpcChannel.AI_STREAM_CHUNK]: StreamChunkData
+  [IpcChannel.AI_STREAM_ERROR]: ApiErrorData
 }
 
 /**

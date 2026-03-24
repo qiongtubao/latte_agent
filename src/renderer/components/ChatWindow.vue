@@ -107,14 +107,31 @@
     </div>
 
     <!-- 错误提示 -->
-    <div v-if="error" class="error-toast">
-      <span>{{ error }}</span>
-      <button
-        v-if="error.includes('密钥')"
-        @click="$emit('openSettings')"
-        class="link-btn"
-      >前往设置</button>
-      <button @click="error = null" class="close-btn">&times;</button>
+    <div v-if="error" :class="['error-toast', errorType]">
+      <div class="error-content">
+        <svg class="error-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="15" y1="9" x2="9" y2="15"/>
+          <line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+        <span class="error-message">{{ error }}</span>
+        <span v-if="errorAction" class="error-action">{{ errorAction }}</span>
+      </div>
+      <div class="error-actions">
+        <!-- 认证错误：前往设置 -->
+        <button
+          v-if="errorType === 'auth'"
+          @click="handleGoSettings"
+          class="link-btn"
+        >前往设置</button>
+        <!-- 可重试错误：重试按钮 -->
+        <button
+          v-if="errorRetryable && lastFailedMessages"
+          @click="retryLastMessage"
+          class="retry-btn"
+        >重试</button>
+        <button @click="error = null" class="close-btn">&times;</button>
+      </div>
     </div>
   </div>
 </template>
@@ -127,7 +144,7 @@
  */
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { invoke, on } from '../ipc/client'
-import { IpcChannel, StreamChunkData } from '@shared/ipc'
+import { IpcChannel, StreamChunkData, ApiErrorData } from '@shared/ipc'
 import type { ChatMessage } from '@shared/session'
 import { marked, type Tokens } from 'marked'
 import hljs from 'highlight.js'
@@ -169,6 +186,10 @@ const loading = ref(false)
 const isStreaming = ref(false)
 const streamingContent = ref('')
 const error = ref<string | null>(null)
+const errorType = ref<string>('')
+const errorAction = ref<string>('')
+const errorRetryable = ref(false)
+const lastFailedMessages = ref<Array<{ role: 'user' | 'assistant' | 'system'; content: string }> | null>(null)
 const lastUsage = ref<{ inputTokens: number; outputTokens: number; model: string } | null>(null)
 
 // DOM 引用
@@ -177,6 +198,7 @@ const inputRef = ref<HTMLTextAreaElement | null>(null)
 
 // 取消监听函数
 let unsubscribeStream: (() => void) | null = null
+let unsubscribeError: (() => void) | null = null
 
 /**
  * 渲染 Markdown 文本为 HTML
@@ -249,9 +271,27 @@ function setupStreamListener(): void {
       streamingContent.value = ''
       isStreaming.value = false
       loading.value = false
+      lastFailedMessages.value = null // 成功完成，清除失败消息
       scrollToBottom()
       focusInput()
     }
+  })
+}
+
+/**
+ * 监听流式错误事件
+ */
+function setupErrorListener(): void {
+  if (unsubscribeError) {
+    unsubscribeError()
+  }
+
+  unsubscribeError = on(IpcChannel.AI_STREAM_ERROR, (data: ApiErrorData) => {
+    showError(data)
+    isStreaming.value = false
+    loading.value = false
+    streamingContent.value = ''
+    focusInput()
   })
 }
 
@@ -265,6 +305,9 @@ async function sendMessage(): Promise<void> {
   loading.value = true
   isStreaming.value = true
   error.value = null
+  errorType.value = ''
+  errorAction.value = ''
+  errorRetryable.value = false
   streamingContent.value = ''
   inputText.value = ''
 
@@ -273,12 +316,17 @@ async function sendMessage(): Promise<void> {
   notifyMessagesUpdate(updated)
   scrollToBottom()
 
+  // 保存本次请求的消息（用于重试）
+  lastFailedMessages.value = [{ role: 'user', content: text }]
+
   try {
     await invoke(IpcChannel.AI_SEND_MESSAGE_STREAM, {
       messages: [{ role: 'user', content: text }],
     })
   } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
+    // 处理同步错误（如密钥未配置）
+    const errData = e as ApiErrorData
+    showError(errData)
     isStreaming.value = false
     loading.value = false
     focusInput()
@@ -306,6 +354,45 @@ async function stopStream(): Promise<void> {
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
   }
+}
+
+/**
+ * 显示错误信息
+ */
+function showError(errData: ApiErrorData): void {
+  error.value = errData.message
+  errorType.value = errData.type
+  errorAction.value = errData.action
+  errorRetryable.value = errData.retryable
+}
+
+/**
+ * 前往设置页面
+ */
+function handleGoSettings(): void {
+  error.value = null
+  emit('openSettings')
+}
+
+/**
+ * 重试上次失败的消息
+ */
+async function retryLastMessage(): Promise<void> {
+  if (!lastFailedMessages.value) return
+
+  // 清除错误状态
+  error.value = null
+  errorType.value = ''
+  errorAction.value = ''
+  errorRetryable.value = false
+
+  // 获取最后一条用户消息
+  const lastUserMsg = lastFailedMessages.value[0]
+  if (!lastUserMsg) return
+
+  // 恢复输入框内容并重新发送
+  inputText.value = lastUserMsg.content
+  await sendMessage()
 }
 
 /**
@@ -347,12 +434,16 @@ watch(() => props.messages.length, () => {
 onMounted(() => {
   checkApiKey()
   setupStreamListener()
+  setupErrorListener()
   focusInput()
 })
 
 onUnmounted(() => {
   if (unsubscribeStream) {
     unsubscribeStream()
+  }
+  if (unsubscribeError) {
+    unsubscribeError()
   }
 })
 </script>
@@ -654,13 +745,53 @@ onUnmounted(() => {
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+  gap: 1rem;
   background: #4a1f1f;
   color: #ff8a8a;
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
+  padding: 0.8rem 1.2rem;
+  border-radius: 10px;
   font-size: 0.85rem;
   z-index: 100;
+  max-width: 90%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.error-toast.auth {
+  background: #3a2a1f;
+  color: #ffb88a;
+}
+
+.error-toast.quota {
+  background: #3f2a3f;
+  color: #da8aff;
+}
+
+.error-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.error-icon {
+  flex-shrink: 0;
+  margin-bottom: 0.2rem;
+}
+
+.error-message {
+  font-weight: 500;
+}
+
+.error-action {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.error-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .error-toast .link-btn {
@@ -670,6 +801,23 @@ onUnmounted(() => {
   text-decoration: underline;
   cursor: pointer;
   font-size: inherit;
+  white-space: nowrap;
+}
+
+.error-toast .retry-btn {
+  background: #e94560;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.error-toast .retry-btn:hover {
+  background: #ff6b8a;
 }
 
 .error-toast .close-btn {
@@ -677,8 +825,14 @@ onUnmounted(() => {
   border: none;
   color: #ff8a8a;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   padding: 0 0.2rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.error-toast .close-btn:hover {
+  opacity: 1;
 }
 </style>
 

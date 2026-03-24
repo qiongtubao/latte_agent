@@ -10,9 +10,11 @@ import {
   AIResponse,
   ChatMessage,
   StreamCallback,
+  StreamErrorCallback,
   StreamChunk,
   registerProvider,
 } from './client'
+import { classifyError, ApiError } from './errors'
 
 /**
  * Anthropic 默认可用模型列表
@@ -69,27 +71,32 @@ export class AnthropicClient implements AIClient {
         content: m.content,
       }))
 
-    // 调用 Claude API
-    const response = await client.messages.create({
-      model,
-      max_tokens: maxTokens,
-      temperature,
-      ...(systemMsg ? { system: systemMsg.content } : {}),
-      messages: chatMessages,
-    })
+    try {
+      // 调用 Claude API
+      const response = await client.messages.create({
+        model,
+        max_tokens: maxTokens,
+        temperature,
+        ...(systemMsg ? { system: systemMsg.content } : {}),
+        messages: chatMessages,
+      })
 
-    // 提取文本内容
-    const textContent = response.content
-      .filter((block) => block.type === 'text')
-      .map((block) => block.text)
-      .join('')
+      // 提取文本内容
+      const textContent = response.content
+        .filter((block) => block.type === 'text')
+        .map((block) => block.text)
+        .join('')
 
-    return {
-      content: textContent,
-      inputTokens: response.usage.input_tokens,
-      outputTokens: response.usage.output_tokens,
-      model: response.model,
-      timestamp: Date.now(),
+      return {
+        content: textContent,
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+        model: response.model,
+        timestamp: Date.now(),
+      }
+    } catch (error) {
+      // 分类并重新抛出错误
+      throw classifyError(error)
     }
   }
 
@@ -100,7 +107,8 @@ export class AnthropicClient implements AIClient {
   sendMessageStream(
     messages: ChatMessage[],
     onChunk: StreamCallback,
-    config?: Partial<AIClientConfig>
+    config?: Partial<AIClientConfig>,
+    onError?: StreamErrorCallback
   ): AbortController {
     // 合并配置覆盖
     const model = config?.model || this.model
@@ -183,8 +191,14 @@ export class AnthropicClient implements AIClient {
           })
           return
         }
-        // 其他错误通过 message_stop 通知（实际项目中可添加错误类型）
-        console.error('流式请求错误:', error)
+        // 分类错误并通过错误回调通知渲染进程
+        const apiError = classifyError(error)
+        console.error('流式请求错误:', apiError.type, apiError.message)
+        // 调用错误回调（如果提供）
+        if (onError) {
+          onError(apiError)
+        }
+        // 仍然发送 message_stop 以结束流
         onChunk({
           type: 'message_stop',
         })
@@ -210,8 +224,10 @@ export class AnthropicClient implements AIClient {
         messages: [{ role: 'user', content: 'hi' }],
       })
       return true
-    } catch {
-      return false
+    } catch (error) {
+      const apiError = classifyError(error)
+      // 只有认证错误才返回 false，其他错误可能是临时问题
+      return apiError.type !== 'auth' && apiError.type !== 'bad_request'
     }
   }
 

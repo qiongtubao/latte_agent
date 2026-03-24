@@ -11,8 +11,10 @@ import {
   IpcEventChannel,
   IpcEventData,
   StreamChunkData,
+  ApiErrorData,
 } from '@shared/ipc'
 import { createClient, AIClient } from '@main/ai/client'
+import { classifyError, ApiError } from '@main/ai/errors'
 import { readSettings, writeSettings, hasApiKey, getFullSettings } from '@main/storage/settings'
 import { loadAllSessions, saveSession, deleteSession } from '@main/storage/session'
 
@@ -96,16 +98,22 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IpcChannel.AI_SEND_MESSAGE,
     async (_event, params: IpcRequestParams<typeof IpcChannel.AI_SEND_MESSAGE>): Promise<IpcResponseData<typeof IpcChannel.AI_SEND_MESSAGE>> => {
-      const client = getAIClient()
-      const response = await client.sendMessage(params.messages, {
-        model: params.model,
-      })
-      return {
-        content: response.content,
-        inputTokens: response.inputTokens,
-        outputTokens: response.outputTokens,
-        model: response.model,
-        timestamp: response.timestamp,
+      try {
+        const client = getAIClient()
+        const response = await client.sendMessage(params.messages, {
+          model: params.model,
+        })
+        return {
+          content: response.content,
+          inputTokens: response.inputTokens,
+          outputTokens: response.outputTokens,
+          model: response.model,
+          timestamp: response.timestamp,
+        }
+      } catch (error) {
+        // 分类错误并重新抛出，让渲染进程处理
+        const apiError = classifyError(error)
+        throw apiError
       }
     }
   )
@@ -114,34 +122,47 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IpcChannel.AI_SEND_MESSAGE_STREAM,
     (event, params: IpcRequestParams<typeof IpcChannel.AI_SEND_MESSAGE_STREAM>): IpcResponseData<typeof IpcChannel.AI_SEND_MESSAGE_STREAM> => {
-      const client = getAIClient()
-      const window = BrowserWindow.fromWebContents(event.sender)
+      try {
+        const client = getAIClient()
+        const window = BrowserWindow.fromWebContents(event.sender)
 
-      // 生成唯一流 ID
-      const streamId = `stream-${Date.now()}`
+        // 生成唯一流 ID
+        const streamId = `stream-${Date.now()}`
 
-      // 如果已有正在进行的流，先停止
-      if (currentStreamController) {
-        currentStreamController.abort()
-        currentStreamController = null
-      }
-
-      // 创建流式请求
-      currentStreamController = client.sendMessageStream(
-        params.messages,
-        (chunk) => {
-          // 通过 IPC 事件将数据块发送到渲染进程
-          if (window) {
-            const chunkData: StreamChunkData = chunk
-            window.webContents.send(IpcChannel.AI_STREAM_CHUNK, chunkData)
-          }
-        },
-        {
-          model: params.model,
+        // 如果已有正在进行的流，先停止
+        if (currentStreamController) {
+          currentStreamController.abort()
+          currentStreamController = null
         }
-      )
 
-      return { streamId }
+        // 创建流式请求，传入错误回调通过 IPC 发送错误
+        currentStreamController = client.sendMessageStream(
+          params.messages,
+          (chunk) => {
+            // 通过 IPC 事件将数据块发送到渲染进程
+            if (window) {
+              const chunkData: StreamChunkData = chunk
+              window.webContents.send(IpcChannel.AI_STREAM_CHUNK, chunkData)
+            }
+          },
+          {
+            model: params.model,
+          },
+          // 流式错误回调：分类错误后通过 IPC 错误通道发送
+          (error) => {
+            if (window) {
+              const apiError = classifyError(error)
+              const errorData: ApiErrorData = apiError.toJSON()
+              window.webContents.send(IpcChannel.AI_STREAM_ERROR, errorData)
+            }
+          }
+        )
+
+        return { streamId }
+      } catch (error) {
+        // 同步错误（如密钥未配置），分类后重新抛出
+        throw classifyError(error)
+      }
     }
   )
 
@@ -174,8 +195,9 @@ export function registerIpcHandlers(): void {
         })
         const valid = await client.validateApiKey()
         return { valid, error: valid ? undefined : 'API 密钥无效' }
-      } catch (e) {
-        return { valid: false, error: e instanceof Error ? e.message : '验证失败' }
+      } catch (error) {
+        const apiError = classifyError(error)
+        return { valid: false, error: apiError.message }
       }
     }
   )
