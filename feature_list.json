@@ -89,7 +89,7 @@
       "消息列表自动滚动到最新",
       "Markdown 代码块语法高亮"
     ],
-    "passes": false,
+    "passes": true,
     "designRef": "对话主界面"
   },
   {

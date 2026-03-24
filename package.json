@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
+    "highlight.js": "^11.11.1",
+    "marked": "^17.0.5",
     "vue": "^3.4.0"
   },
   "devDependencies": {

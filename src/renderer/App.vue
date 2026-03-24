@@ -1,22 +1,21 @@
 <template>
   <div id="app">
-    <h1>Latte Agent</h1>
-    <p>Electron + Vue3 应用已成功启动</p>
+    <!-- 对话主界面（默认视图） -->
+    <ChatWindow v-if="view === 'chat'" @open-settings="view = 'settings'" />
 
-    <!-- 标签导航 -->
-    <div class="tabs">
-      <button
-        v-for="tab in tabs"
-        :key="tab.id"
-        :class="['tab', { active: activeTab === tab.id }]"
-        @click="activeTab = tab.id"
-      >
-        {{ tab.label }}
+    <!-- 设置面板（覆盖层） -->
+    <div v-else-if="view === 'settings'" class="settings-overlay">
+      <SettingsPanel />
+      <button class="back-btn" @click="view = 'chat'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        返回对话
       </button>
     </div>
 
-    <!-- IPC 测试面板 -->
-    <div v-if="activeTab === 'ipc'" class="ipc-test">
+    <!-- IPC 测试面板（开发调试用） -->
+    <div v-else-if="view === 'ipc'" class="dev-panel">
       <h2>IPC 通信测试</h2>
       <div class="test-section">
         <button @click="testPing" :disabled="loading">测试 Ping/Pong</button>
@@ -39,33 +38,22 @@
         <strong>错误:</strong> {{ error }}
       </div>
     </div>
-
-    <!-- AI 对话测试面板 -->
-    <AITestPanel v-else-if="activeTab === 'ai'" @open-settings="activeTab = 'settings'" />
-
-    <!-- 设置面板 -->
-    <SettingsPanel v-else-if="activeTab === 'settings'" />
   </div>
 </template>
 
 <script setup lang="ts">
 /**
  * App 根组件
- * 应用入口视图，包含 IPC 测试、AI 测试和设置
+ * 应用入口视图，默认显示对话主界面
  */
 import { ref } from 'vue'
 import { invoke, on } from './ipc/client'
 import { IpcChannel } from '@shared/ipc'
-import AITestPanel from './components/AITestPanel.vue'
+import ChatWindow from './components/ChatWindow.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 
-// 标签页
-const tabs = [
-  { id: 'ipc', label: 'IPC 测试' },
-  { id: 'ai', label: 'AI 对话' },
-  { id: 'settings', label: '设置' },
-]
-const activeTab = ref('ai') // 默认打开 AI 对话页
+// 视图切换：chat（默认）、settings、ipc（开发调试）
+const view = ref<'chat' | 'settings' | 'ipc'>('chat')
 
 // IPC 测试状态
 const loading = ref(false)
@@ -107,7 +95,7 @@ async function getAppInfo(): Promise<void> {
   }
 }
 
-// 监听主进程推送的通知事件（演示双向通信）
+// 监听主进程推送的通知事件
 on(IpcChannel.NOTIFICATION, (data) => {
   console.log('收到主进程通知:', data)
 })
@@ -128,69 +116,53 @@ body {
 }
 
 #app {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 设置面板覆盖层 */
+.settings-overlay {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  height: 100vh;
   padding: 2rem;
+  background: #1a1a2e;
 }
 
-h1 {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
-  color: #e94560;
+.settings-overlay .settings-panel {
+  min-width: 420px;
+}
+
+.back-btn {
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #2a4a6a;
+  color: #8ecae6;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.back-btn:hover {
+  background: #3a5a7a;
+}
+
+/* IPC 开发调试面板 */
+.dev-panel {
+  padding: 2rem;
 }
 
 h2 {
   font-size: 1.3rem;
   margin-bottom: 1rem;
   color: #e94560;
-}
-
-p {
-  font-size: 1.1rem;
-  color: #a0a0b0;
-  margin-bottom: 1.5rem;
-}
-
-/* 标签页样式 */
-.tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  background: #16213e;
-  border-radius: 8px;
-  padding: 0.3rem;
-}
-
-.tab {
-  padding: 0.5rem 1.2rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  color: #a0a0b0;
-  background: transparent;
-  transition: all 0.2s;
-}
-
-.tab:hover {
-  color: #e0e0e0;
-  background: #1a2a4a;
-}
-
-.tab.active {
-  color: white;
-  background: #e94560;
-}
-
-/* IPC 测试区域样式 */
-.ipc-test {
-  background: #16213e;
-  border-radius: 12px;
-  padding: 1.5rem 2rem;
-  min-width: 400px;
 }
 
 .test-section {
@@ -231,7 +203,7 @@ button:disabled {
 }
 
 .result {
-  background: #0f3460;
+  background: #16213e;
   border-radius: 6px;
   padding: 1rem;
   margin-bottom: 0.8rem;
