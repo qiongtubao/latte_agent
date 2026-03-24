@@ -148,5 +148,52 @@
     ],
     "passes": true,
     "designRef": "对话主界面"
+  },
+  {
+    "id": "F009",
+    "category": "Core",
+    "priority": 9,
+    "description": "为核心功能补充详细单元测试（IPC、AI 客户端、错误分类）",
+    "steps": [
+      "为 IPC 通道类型 src/shared/ipc.ts 编写类型校验测试",
+      "为错误分类模块 src/main/ai/errors.ts 编写 classifyError 单测",
+      "为 AI 客户端抽象 src/main/ai/client.ts 编写接口模拟测试",
+      "运行 make test 确认所有测试通过",
+      "确认测试覆盖率覆盖核心逻辑分支"
+    ],
+    "tests": [
+      "classifyError 能正确分类网络错误、认证错误、配额错误、超时错误",
+      "classifyError 对 ApiError 实例直接返回不重复处理",
+      "classifyError 未知错误包含原始错误信息",
+      "IPC 通道类型定义完整且类型安全",
+      "make test 全部通过"
+    ],
+    "passes": false,
+    "designRef": ""
+  },
+  {
+    "id": "F010",
+    "category": "UI",
+    "priority": 10,
+    "description": "启动应用验证页面设计和功能正确性",
+    "steps": [
+      "执行 npm run dev 启动开发服务器",
+      "检查对话主界面布局是否正确（侧边栏 + 消息区 + 输入区）",
+      "检查 Markdown 渲染是否正常（代码块、标题、列表）",
+      "检查侧边栏会话列表和新建对话功能",
+      "检查设置页面 API 密钥配置功能",
+      "检查错误提示 UI 是否正常显示",
+      "修复发现的问题"
+    ],
+    "tests": [
+      "应用启动无白屏、无控制台错误",
+      "对话界面三栏布局正确显示",
+      "输入框可输入文本并发送",
+      "侧边栏可切换会话",
+      "make build 编译通过",
+      "make test 全部通过"
+    ],
+    "passes": false,
+    "designRef": "对话主界面"
   }
 ]
