@@ -283,9 +283,14 @@ function setupStreamListener(): void {
         }
       }
     } else if (data.type === 'message_delta') {
-      // 更新输出 token 数
-      if (lastUsage.value && data.outputTokens) {
-        lastUsage.value.outputTokens = data.outputTokens
+      // 更新 token 数（inputTokens 和 outputTokens 可能同时到达，如 Ollama）
+      if (lastUsage.value) {
+        if (data.outputTokens) {
+          lastUsage.value.outputTokens = data.outputTokens
+        }
+        if (data.inputTokens) {
+          lastUsage.value.inputTokens = data.inputTokens
+        }
       }
     } else if (data.type === 'message_stop') {
       // 消息结束，将流式内容添加到消息列表（附带元数据）

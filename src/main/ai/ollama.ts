@@ -31,6 +31,10 @@ interface OllamaChatResponse {
     content: string
   }
   done: boolean
+  /** 输入 token 数（仅 done=true 时返回） */
+  prompt_eval_count?: number
+  /** 输出 token 数（仅 done=true 时返回） */
+  eval_count?: number
 }
 
 interface OllamaTagsResponse {
@@ -170,6 +174,8 @@ export class OllamaClient implements AIClient {
 
         const decoder = new TextDecoder()
         let fullContent = ''
+        let inputTokens = 0
+        let outputTokens = 0
 
         while (true) {
           const { done, value } = await reader.read()
@@ -189,10 +195,14 @@ export class OllamaClient implements AIClient {
                   delta: data.message.content,
                 })
               }
+              // Ollama 在最后一个 chunk (done=true) 返回 token 统计
               if (data.done) {
+                inputTokens = data.prompt_eval_count || 0
+                outputTokens = data.eval_count || 0
                 onChunk({
                   type: 'message_delta',
-                  outputTokens: 0,
+                  outputTokens,
+                  inputTokens,
                 })
               }
             } catch {
