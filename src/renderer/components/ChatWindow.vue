@@ -75,7 +75,15 @@
 
       <!-- 输入区域 -->
       <div class="input-area">
-        <div class="input-wrapper">
+        <div class="input-wrapper" :class="{ 'has-command': commandPaletteVisible }">
+          <!-- 命令面板下拉 -->
+          <CommandPalette
+            ref="commandPaletteRef"
+            :inputText="inputText"
+            :visible="commandPaletteVisible"
+            @select="handleCommandSelect"
+            @close="closeCommandPalette"
+          />
           <textarea
             ref="inputRef"
             v-model="inputText"
@@ -161,16 +169,20 @@ import { IpcChannel, StreamChunkData, ApiErrorData } from '@shared/ipc'
 import type { ChatMessage } from '@shared/session'
 import { marked, type Tokens } from 'marked'
 import hljs from 'highlight.js'
+import CommandPalette from './CommandPalette.vue'
+import { registerBuiltinCommands } from '../commands/builtin'
 
 // Props：从父组件接收消息列表
 const props = defineProps<{
   messages: ChatMessage[]
 }>()
 
-// 事件：向父组件通知消息变化
+// 事件：向父组件通知消息变化和操作请求
 const emit = defineEmits<{
   openSettings: []
   messagesChange: [messages: ChatMessage[]]
+  newChat: []
+  deleteSession: []
 }>()
 
 /**
@@ -217,6 +229,18 @@ const lastFailedMessages = ref<Array<{ role: 'user' | 'assistant' | 'system'; co
 const lastUsage = ref<{ inputTokens: number; outputTokens: number; model: string } | null>(null)
 /** 流式请求开始时间，用于计算响应耗时 */
 const streamStartTime = ref<number | null>(null)
+
+// 命令面板状态
+const commandPaletteVisible = ref(false)
+const commandPaletteRef = ref<InstanceType<typeof CommandPalette> | null>(null)
+
+// 监听输入变化，控制命令面板显示
+watch(() => inputText.value, (text) => {
+  commandPaletteVisible.value = text.startsWith('/') && !loading.value && !isStreaming.value
+})
+
+// 注册内置命令
+let unregisterBuiltin: (() => void) | null = null
 
 // DOM 引用
 const messagesContainer = ref<HTMLElement | null>(null)
@@ -385,10 +409,29 @@ function setupErrorListener(): void {
 
 /**
  * 发送消息到 AI（流式）
+ * 如果输入以 / 开头，则执行命令
  */
 async function sendMessage(): Promise<void> {
   const text = inputText.value.trim()
   if (!text || loading.value) return
+
+  // 命令拦截：以 / 开头时执行命令
+  if (text.startsWith('/')) {
+    inputText.value = ''
+    commandPaletteVisible.value = false
+    const { commandRegistry } = await import('@shared/commands')
+    const result = await commandRegistry.execute(text)
+    if (result) {
+      // 将命令结果作为系统消息显示
+      const updated = [...localMessages.value, {
+        role: 'assistant' as const,
+        content: `\`\`\`\n${result}\n\`\`\``,
+        timestamp: Date.now(),
+      }]
+      notifyMessagesUpdate(updated)
+    }
+    return
+  }
 
   loading.value = true
   isStreaming.value = true
@@ -497,8 +540,13 @@ async function retryLastMessage(): Promise<void> {
 
 /**
  * 键盘事件处理：Enter 发送，Shift + Enter 换行
+ * 命令面板打开时转发给面板处理
  */
 function handleKeydown(e: KeyboardEvent): void {
+  // 命令面板优先处理
+  if (commandPaletteRef.value?.handleKeydown(e)) {
+    return
+  }
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault()
     sendMessage()
@@ -525,6 +573,22 @@ function focusInput(): void {
 }
 
 /**
+ * 命令选择处理：补全命令路径到输入框
+ */
+function handleCommandSelect(cmd: { path: string; requireArgs?: boolean; argsHint?: string }): void {
+  const hint = cmd.argsHint ? ` ${cmd.argsHint}` : ''
+  inputText.value = `/${cmd.path}${hint} `
+  focusInput()
+}
+
+/**
+ * 关闭命令面板
+ */
+function closeCommandPalette(): void {
+  // 仅关闭面板，不清空输入
+}
+
+/**
  * 当消息列表变化时（切换会话），滚动到底部
  */
 watch(() => props.messages.length, () => {
@@ -536,6 +600,13 @@ onMounted(() => {
   setupStreamListener()
   setupErrorListener()
   focusInput()
+  // 注册内置命令
+  unregisterBuiltin = registerBuiltinCommands({
+    onOpenSettings: () => emit('openSettings'),
+    onModelChange: (model: string) => { /* 可扩展：通知父组件模型变更 */ },
+    onNewChat: () => emit('newChat'),
+    onDeleteSession: () => emit('deleteSession'),
+  })
 })
 
 onUnmounted(() => {
@@ -544,6 +615,11 @@ onUnmounted(() => {
   }
   if (unsubscribeError) {
     unsubscribeError()
+  }
+  // 注销内置命令
+  if (unregisterBuiltin) {
+    unregisterBuiltin()
+    unregisterBuiltin = null
   }
 })
 </script>
@@ -819,6 +895,16 @@ onUnmounted(() => {
 
 .input-wrapper:focus-within {
   border-color: #e94560;
+}
+
+/* 命令面板激活时输入框样式 */
+.input-wrapper.has-command {
+  border-color: #8ecae6;
+}
+
+.input-wrapper.has-command:focus-within {
+  border-color: #8ecae6;
+  box-shadow: 0 0 0 1px rgba(142, 202, 230, 0.2);
 }
 
 .input-wrapper textarea {

@@ -20,6 +20,8 @@
             :messages="activeMessages"
             @openSettings="view = 'settings'"
             @messagesChange="onMessagesChange"
+            @newChat="createSession"
+            @deleteSession="deleteSession(activeSessionId!)"
           />
 
           <!-- 无活跃会话时提示新建 -->
