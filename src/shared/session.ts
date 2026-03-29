@@ -7,6 +7,14 @@
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+  /** 消息发送/接收时间戳 */
+  timestamp?: number
+  /** AI 响应耗时（毫秒），仅 assistant 消息 */
+  duration?: number
+  /** 输入 token 数，仅 assistant 消息 */
+  inputTokens?: number
+  /** 输出 token 数，仅 assistant 消息 */
+  outputTokens?: number
 }
 
 /** 会话 */

@@ -44,6 +44,13 @@
             />
             <!-- 用户消息纯文本渲染 -->
             <div v-else class="message-content">{{ msg.content }}</div>
+            <!-- 消息元信息：时间、耗时、Token -->
+            <div v-if="msg.timestamp" class="message-meta">
+              <span class="meta-time">{{ formatTime(msg.timestamp) }}</span>
+              <span v-if="msg.role === 'assistant' && msg.duration != null" class="meta-duration">耗时 {{ formatDuration(msg.duration) }}</span>
+              <span v-if="msg.role === 'assistant' && msg.inputTokens" class="meta-tokens">输入 {{ msg.inputTokens }}</span>
+              <span v-if="msg.role === 'assistant' && msg.outputTokens" class="meta-tokens">输出 {{ msg.outputTokens }}</span>
+            </div>
           </div>
         </div>
 
@@ -191,6 +198,8 @@ const errorAction = ref<string>('')
 const errorRetryable = ref(false)
 const lastFailedMessages = ref<Array<{ role: 'user' | 'assistant' | 'system'; content: string }> | null>(null)
 const lastUsage = ref<{ inputTokens: number; outputTokens: number; model: string } | null>(null)
+/** 流式请求开始时间，用于计算响应耗时 */
+const streamStartTime = ref<number | null>(null)
 
 // DOM 引用
 const messagesContainer = ref<HTMLElement | null>(null)
@@ -210,6 +219,25 @@ function renderMarkdown(text: string): string {
   } catch {
     return text
   }
+}
+
+/**
+ * 格式化时间戳为 HH:MM:SS
+ */
+function formatTime(timestamp: number): string {
+  const date = new Date(timestamp)
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
+/**
+ * 格式化耗时（毫秒 → 易读格式）
+ */
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
+  const mins = Math.floor(ms / 60000)
+  const secs = Math.round((ms % 60000) / 1000)
+  return `${mins}m ${secs}s`
 }
 
 /**
@@ -260,11 +288,17 @@ function setupStreamListener(): void {
         lastUsage.value.outputTokens = data.outputTokens
       }
     } else if (data.type === 'message_stop') {
-      // 消息结束，将流式内容添加到消息列表
+      // 消息结束，将流式内容添加到消息列表（附带元数据）
       if (streamingContent.value) {
+        // 计算响应耗时
+        const duration = streamStartTime.value ? Date.now() - streamStartTime.value : undefined
         const updated = [...props.messages, {
           role: 'assistant' as const,
           content: streamingContent.value,
+          timestamp: Date.now(),
+          duration,
+          inputTokens: lastUsage.value?.inputTokens,
+          outputTokens: lastUsage.value?.outputTokens,
         }]
         notifyMessagesUpdate(updated)
       }
@@ -272,6 +306,7 @@ function setupStreamListener(): void {
       isStreaming.value = false
       loading.value = false
       lastFailedMessages.value = null // 成功完成，清除失败消息
+      streamStartTime.value = null // 清除计时
       scrollToBottom()
       focusInput()
     }
@@ -311,13 +346,17 @@ async function sendMessage(): Promise<void> {
   streamingContent.value = ''
   inputText.value = ''
 
-  // 添加用户消息，通知父组件
-  const updated = [...props.messages, { role: 'user' as const, content: text }]
+  // 添加用户消息（附带时间戳），通知父组件
+  const now = Date.now()
+  const updated = [...props.messages, { role: 'user' as const, content: text, timestamp: now }]
   notifyMessagesUpdate(updated)
   scrollToBottom()
 
   // 保存本次请求的消息（用于重试）
   lastFailedMessages.value = [{ role: 'user', content: text }]
+
+  // 记录流式请求开始时间
+  streamStartTime.value = now
 
   try {
     await invoke(IpcChannel.AI_SEND_MESSAGE_STREAM, {
@@ -340,15 +379,22 @@ async function stopStream(): Promise<void> {
   try {
     await invoke(IpcChannel.AI_STOP_STREAM)
     if (streamingContent.value) {
+      // 计算已生成耗时
+      const duration = streamStartTime.value ? Date.now() - streamStartTime.value : undefined
       const updated = [...props.messages, {
         role: 'assistant' as const,
         content: streamingContent.value + '\n\n*[已停止]*',
+        timestamp: Date.now(),
+        duration,
+        inputTokens: lastUsage.value?.inputTokens,
+        outputTokens: lastUsage.value?.outputTokens,
       }]
       notifyMessagesUpdate(updated)
     }
     streamingContent.value = ''
     isStreaming.value = false
     loading.value = false
+    streamStartTime.value = null
     scrollToBottom()
     focusInput()
   } catch (e) {
@@ -619,6 +665,40 @@ onUnmounted(() => {
   background: #16213e;
   color: #e0e0e0;
   border-top-left-radius: 4px;
+}
+
+/* 消息元信息（时间、耗时、Token） */
+.message-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  color: #6a7a8a;
+}
+
+.message-meta span {
+  padding: 0.1rem 0.4rem;
+  background: rgba(42, 58, 90, 0.4);
+  border-radius: 4px;
+}
+
+.message.user .message-meta {
+  justify-content: flex-end;
+  background: transparent;
+}
+
+.message.user .message-meta span {
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.meta-duration {
+  color: #8ecae6;
+}
+
+.meta-tokens {
+  color: #a0d0a0;
 }
 
 /* 流式输出 */

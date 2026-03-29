@@ -44,7 +44,7 @@ const mockIpc: ElectronIPC = {
     // 根据不同的 channel 返回 mock 数据
     switch (channel) {
       case IpcChannel.SESSION_LOAD_ALL:
-        return { sessions: [] } as IpcResponseData<T>
+        return { sessions: [] } as unknown as IpcResponseData<T>
       case IpcChannel.SETTINGS_GET:
         return {
           aiProvider: 'anthropic',
@@ -54,39 +54,39 @@ const mockIpc: ElectronIPC = {
           temperature: 0.7,
           hasApiKey: false,
           activeProfileId: null,
-        } as IpcResponseData<T>
+        } as unknown as IpcResponseData<T>
       case IpcChannel.SETTINGS_HAS_KEY:
-        return { hasKey: false } as IpcResponseData<T>
+        return { hasKey: false } as unknown as IpcResponseData<T>
       case IpcChannel.PING:
-        return { message: 'mock-pong', timestamp: Date.now(), echoTimestamp: Date.now() } as IpcResponseData<T>
+        return { message: 'mock-pong', timestamp: Date.now(), echoTimestamp: Date.now() } as unknown as IpcResponseData<T>
       case IpcChannel.GET_APP_INFO:
-        return { name: 'Latte Agent', version: '0.1.0', platform: 'browser' } as IpcResponseData<T>
+        return { name: 'Latte Agent', version: '0.1.0', platform: 'browser' } as unknown as IpcResponseData<T>
       case IpcChannel.AI_GET_MODELS:
         // 返回 mock 模型列表，避免组件渲染时报错
         return {
           models: ['claude-sonnet-4-6', 'claude-opus-4-6', 'claude-haiku-4-5-20251001']
-        } as IpcResponseData<T>
+        } as unknown as IpcResponseData<T>
       case IpcChannel.AI_VALIDATE_KEY:
-        return { valid: false, error: 'Mock: 未实际验证' } as IpcResponseData<T>
+        return { valid: false, error: 'Mock: 未实际验证' } as unknown as IpcResponseData<T>
       case IpcChannel.AI_SEND_MESSAGE:
-        return { messageId: 'mock-msg-' + Date.now() } as IpcResponseData<T>
+        return { messageId: 'mock-msg-' + Date.now() } as unknown as IpcResponseData<T>
       // 档案管理 mock 响应
       case IpcChannel.PROFILE_LIST:
-        return { profiles: [] } as IpcResponseData<T>
+        return { profiles: [] } as unknown as IpcResponseData<T>
       case IpcChannel.PROFILE_SAVE:
-        return { profile: {}, success: true } as IpcResponseData<T>
+        return { profile: {}, success: true } as unknown as IpcResponseData<T>
       case IpcChannel.PROFILE_DELETE:
-        return { success: true } as IpcResponseData<T>
+        return { success: true } as unknown as IpcResponseData<T>
       case IpcChannel.PROFILE_ACTIVATE:
-        return { success: true, activeProfileId: '' } as IpcResponseData<T>
+        return { success: true, activeProfileId: '' } as unknown as IpcResponseData<T>
       case IpcChannel.PROFILE_GET_ACTIVE:
-        return { profile: null } as IpcResponseData<T>
+        return { profile: null } as unknown as IpcResponseData<T>
       // Ollama 动态模型 mock 响应
       case IpcChannel.OLLAMA_FETCH_MODELS:
-        return { models: ['llama3', 'qwen2', 'mistral'], success: true } as IpcResponseData<T>
+        return { models: ['llama3', 'qwen2', 'mistral'], success: true } as unknown as IpcResponseData<T>
       default:
         // 通用 mock 响应
-        return {} as IpcResponseData<T>
+        return {} as unknown as IpcResponseData<T>
     }
   },
   on<T extends IpcEventChannel>(_channel: T, callback: (data: IpcEventData<T>) => void): () => void {
