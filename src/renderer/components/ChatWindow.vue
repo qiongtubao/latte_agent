@@ -174,6 +174,17 @@ const emit = defineEmits<{
 }>()
 
 /**
+ * 本地消息列表副本
+ * 用于流式响应时同步追踪消息，避免 props 更新延迟导致消息丢失
+ */
+const localMessages = ref<ChatMessage[]>([...props.messages])
+
+// 监听 props.messages 变化，同步更新本地副本
+watch(() => props.messages, (newMsgs) => {
+  localMessages.value = [...newMsgs]
+}, { immediate: true })
+
+/**
  * 自定义渲染器：代码块使用 highlight.js 语法高亮
  */
 const customRenderer = new marked.Renderer()
@@ -259,9 +270,10 @@ async function checkApiKey(): Promise<void> {
 }
 
 /**
- * 通知父组件消息列表已更新
+ * 通知父组件消息列表已更新，同时同步本地副本
  */
 function notifyMessagesUpdate(updatedMessages: ChatMessage[]): void {
+  localMessages.value = [...updatedMessages]
   emit('messagesChange', updatedMessages)
 }
 
@@ -271,27 +283,27 @@ function notifyMessagesUpdate(updatedMessages: ChatMessage[]): void {
  * - 如果是 AI 消息，同时删除上一条用户消息（如果有）
  */
 function deleteMessage(index: number): void {
-  const msg = props.messages[index]
+  const msg = localMessages.value[index]
   if (!msg) return
 
   const toDelete = new Set<number>([index])
 
   if (msg.role === 'user') {
     // 用户消息：同时删除下一条 AI 回复
-    const nextMsg = props.messages[index + 1]
+    const nextMsg = localMessages.value[index + 1]
     if (nextMsg?.role === 'assistant') {
       toDelete.add(index + 1)
     }
   } else {
     // AI 消息：同时删除上一条用户消息
-    const prevMsg = props.messages[index - 1]
+    const prevMsg = localMessages.value[index - 1]
     if (prevMsg?.role === 'user') {
       toDelete.add(index - 1)
     }
   }
 
   // 过滤掉要删除的消息
-  const updated = props.messages.filter((_, i) => !toDelete.has(i))
+  const updated = localMessages.value.filter((_, i) => !toDelete.has(i))
   notifyMessagesUpdate(updated)
 }
 
@@ -333,7 +345,7 @@ function setupStreamListener(): void {
       if (streamingContent.value) {
         // 计算响应耗时
         const duration = streamStartTime.value ? Date.now() - streamStartTime.value : undefined
-        const updated = [...props.messages, {
+        const updated = [...localMessages.value, {
           role: 'assistant' as const,
           content: streamingContent.value,
           timestamp: Date.now(),
@@ -389,7 +401,7 @@ async function sendMessage(): Promise<void> {
 
   // 添加用户消息（附带时间戳），通知父组件
   const now = Date.now()
-  const updated = [...props.messages, { role: 'user' as const, content: text, timestamp: now }]
+  const updated = [...localMessages.value, { role: 'user' as const, content: text, timestamp: now }]
   notifyMessagesUpdate(updated)
   scrollToBottom()
 
@@ -423,7 +435,7 @@ async function stopStream(): Promise<void> {
     if (streamingContent.value) {
       // 计算已生成耗时
       const duration = streamStartTime.value ? Date.now() - streamStartTime.value : undefined
-      const updated = [...props.messages, {
+      const updated = [...localMessages.value, {
         role: 'assistant' as const,
         content: streamingContent.value + '\n\n*[已停止]*',
         timestamp: Date.now(),

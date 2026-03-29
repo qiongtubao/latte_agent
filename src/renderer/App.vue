@@ -110,10 +110,13 @@ const activeMessages = computed<ChatMessage[]>(
 
 /**
  * 将会话持久化到主进程存储
+ * 使用深拷贝去除 Vue 响应式代理，避免 IPC 序列化丢失数据
  */
 async function persistSession(session: Session): Promise<void> {
   try {
-    await invoke(IpcChannel.SESSION_SAVE, { session: { ...session } })
+    // 深拷贝确保去除 Vue 响应式代理，避免 IPC 序列化问题
+    const plainSession: Session = JSON.parse(JSON.stringify(session))
+    await invoke(IpcChannel.SESSION_SAVE, { session: plainSession })
   } catch (e) {
     console.error('保存会话失败:', e)
   }
