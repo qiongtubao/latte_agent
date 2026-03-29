@@ -50,6 +50,12 @@
               <span v-if="msg.role === 'assistant' && msg.duration != null" class="meta-duration">耗时 {{ formatDuration(msg.duration) }}</span>
               <span v-if="msg.role === 'assistant' && msg.inputTokens" class="meta-tokens">输入 {{ msg.inputTokens }}</span>
               <span v-if="msg.role === 'assistant' && msg.outputTokens" class="meta-tokens">输出 {{ msg.outputTokens }}</span>
+              <!-- 删除按钮 -->
+              <button class="delete-msg-btn" @click="deleteMessage(i)" title="删除此消息">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -257,6 +263,36 @@ async function checkApiKey(): Promise<void> {
  */
 function notifyMessagesUpdate(updatedMessages: ChatMessage[]): void {
   emit('messagesChange', updatedMessages)
+}
+
+/**
+ * 删除指定索引的消息
+ * - 如果是用户消息，同时删除下一条 AI 回复（如果有）
+ * - 如果是 AI 消息，同时删除上一条用户消息（如果有）
+ */
+function deleteMessage(index: number): void {
+  const msg = props.messages[index]
+  if (!msg) return
+
+  const toDelete = new Set<number>([index])
+
+  if (msg.role === 'user') {
+    // 用户消息：同时删除下一条 AI 回复
+    const nextMsg = props.messages[index + 1]
+    if (nextMsg?.role === 'assistant') {
+      toDelete.add(index + 1)
+    }
+  } else {
+    // AI 消息：同时删除上一条用户消息
+    const prevMsg = props.messages[index - 1]
+    if (prevMsg?.role === 'user') {
+      toDelete.add(index - 1)
+    }
+  }
+
+  // 过滤掉要删除的消息
+  const updated = props.messages.filter((_, i) => !toDelete.has(i))
+  notifyMessagesUpdate(updated)
 }
 
 /**
@@ -705,6 +741,33 @@ onUnmounted(() => {
 
 .meta-tokens {
   color: #a0d0a0;
+}
+
+/* 消息删除按钮 */
+.delete-msg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: #5a6a7a;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s;
+  padding: 0;
+  margin-left: 0.2rem;
+}
+
+.message-meta:hover .delete-msg-btn {
+  opacity: 1;
+}
+
+.delete-msg-btn:hover {
+  background: #4a1f1f;
+  color: #ff8a8a;
 }
 
 /* 流式输出 */
