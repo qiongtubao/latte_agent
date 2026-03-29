@@ -37,6 +37,79 @@
         "feature_list.json"
       ],
       "nextFeature": "F003"
+    },
+    {
+      "id": "session-003",
+      "date": "2026-03-24",
+      "featureId": "F004",
+      "summary": "AI 响应流式输出：实现 SSE 流式解析、实时渲染和停止生成功能",
+      "filesChanged": [
+        "src/main/ai/client.ts",
+        "src/main/ai/anthropic.ts",
+        "src/main/ai/index.ts",
+        "src/main/ipc/handlers.ts",
+        "src/main/storage/settings.ts",
+        "src/shared/ipc.ts",
+        "src/renderer/components/AITestPanel.vue",
+        "src/renderer/components/SettingsPanel.vue",
+        "src/renderer/App.vue",
+        "feature_list.json"
+      ],
+      "nextFeature": "F005"
+    },
+    {
+      "id": "session-004",
+      "date": "2026-03-24",
+      "featureId": "F005",
+      "summary": "对话主界面：创建 ChatWindow 组件，实现三栏布局、消息列表、Markdown 渲染",
+      "filesChanged": [
+        "package.json",
+        "src/renderer/components/ChatWindow.vue",
+        "src/renderer/App.vue",
+        "feature_list.json"
+      ],
+      "nextFeature": "F006"
+    },
+    {
+      "id": "session-005",
+      "date": "2026-03-24",
+      "featureId": "F006",
+      "summary": "侧边栏导航：创建 Sidebar 组件，实现会话列表、新建对话、切换/删除会话功能",
+      "filesChanged": [
+        "src/shared/session.ts",
+        "src/renderer/components/Sidebar.vue",
+        "src/renderer/App.vue",
+        "src/renderer/components/ChatWindow.vue",
+        "feature_list.json"
+      ],
+      "nextFeature": "F007"
+    },
+    {
+      "id": "session-006",
+      "date": "2026-03-24",
+      "featureId": "F007",
+      "summary": "对话历史 JSON 持久化：实现会话存储模块、IPC 通道、启动加载和自动保存",
+      "filesChanged": [
+        "src/main/storage/session.ts",
+        "src/main/ipc/handlers.ts",
+        "src/shared/ipc.ts",
+        "src/renderer/App.vue",
+        "feature_list.json"
+      ],
+      "nextFeature": "F008"
+    },
+    {
+      "id": "session-007",
+      "date": "2026-03-24",
+      "featureId": "F008",
+      "summary": "API 错误处理：完善流式错误 IPC 通道，实现错误分类、重试按钮、认证/配额提示",
+      "filesChanged": [
+        "src/main/ai/client.ts",
+        "src/main/ai/anthropic.ts",
+        "src/main/ipc/handlers.ts",
+        "feature_list.json"
+      ],
+      "nextFeature": null
     }
   ]
 }

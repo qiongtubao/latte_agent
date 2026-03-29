@@ -25,6 +25,16 @@ export const IpcChannel = {
   SETTINGS_SET: 'settings:set',
   SETTINGS_HAS_KEY: 'settings:has-key',
 
+  // 模型配置档案通道
+  PROFILE_LIST: 'profile:list',             // 获取所有档案列表
+  PROFILE_SAVE: 'profile:save',             // 保存档案（新增或更新）
+  PROFILE_DELETE: 'profile:delete',         // 删除档案
+  PROFILE_ACTIVATE: 'profile:activate',     // 激活指定档案
+  PROFILE_GET_ACTIVE: 'profile:get-active', // 获取当前激活的档案
+
+  // Ollama 动态获取模型列表
+  OLLAMA_FETCH_MODELS: 'ollama:fetch-models',
+
   // 主进程 -> 渲染进程 (send)
   NOTIFICATION: 'ipc:notification',
   LOG: 'ipc:log',
@@ -92,14 +102,44 @@ export interface ApiErrorData {
 }
 
 /**
+ * 模型配置档案
+ * 支持多配置保存与切换，每个档案包含一个完整的模型配置
+ */
+export interface ModelProfile {
+  /** 档案唯一 ID */
+  id: string
+  /** 档案别名（用户可自定义的友好名称） */
+  alias: string
+  /** AI 提供商 */
+  aiProvider: string
+  /** API 地址（Ollama/自定义 API 使用） */
+  baseUrl: string
+  /** 默认模型 */
+  defaultModel: string
+  /** 最大 token 数 */
+  maxTokens: number
+  /** 温度参数 */
+  temperature: number
+  /** 是否为手动输入的自定义模型（非从列表选择） */
+  isCustomModel: boolean
+  /** 创建时间戳 */
+  createdAt: number
+  /** 更新时间戳 */
+  updatedAt: number
+}
+
+/**
  * 设置数据（不含敏感信息）
  */
 export interface SettingsData {
   aiProvider: string
+  baseUrl: string
   defaultModel: string
   maxTokens: number
   temperature: number
   hasApiKey: boolean
+  /** 当前激活的档案 ID */
+  activeProfileId: string | null
 }
 
 /**
@@ -111,11 +151,21 @@ export interface IpcRequestMap {
   [IpcChannel.AI_SEND_MESSAGE]: AISendMessageRequest
   [IpcChannel.AI_SEND_MESSAGE_STREAM]: AISendMessageRequest
   [IpcChannel.AI_STOP_STREAM]: void
-  [IpcChannel.AI_VALIDATE_KEY]: { apiKey: string }
+  [IpcChannel.AI_VALIDATE_KEY]: { apiKey?: string; baseUrl?: string; provider?: string }
   [IpcChannel.AI_GET_MODELS]: void
   [IpcChannel.SETTINGS_GET]: void
   [IpcChannel.SETTINGS_SET]: Partial<SettingsData> & { apiKey?: string }
   [IpcChannel.SETTINGS_HAS_KEY]: void
+
+  // 档案通道请求
+  [IpcChannel.PROFILE_LIST]: void
+  [IpcChannel.PROFILE_SAVE]: { profile: ModelProfile }
+  [IpcChannel.PROFILE_DELETE]: { profileId: string }
+  [IpcChannel.PROFILE_ACTIVATE]: { profileId: string }
+  [IpcChannel.PROFILE_GET_ACTIVE]: void
+
+  // Ollama 动态模型请求
+  [IpcChannel.OLLAMA_FETCH_MODELS]: { baseUrl?: string }
   [IpcChannel.SESSION_LOAD_ALL]: void
   [IpcChannel.SESSION_SAVE]: { session: Session }
   [IpcChannel.SESSION_DELETE]: { sessionId: string }
@@ -135,6 +185,16 @@ export interface IpcResponseMap {
   [IpcChannel.SETTINGS_GET]: SettingsData
   [IpcChannel.SETTINGS_SET]: SettingsData
   [IpcChannel.SETTINGS_HAS_KEY]: { hasKey: boolean }
+
+  // 档案通道响应
+  [IpcChannel.PROFILE_LIST]: { profiles: ModelProfile[] }
+  [IpcChannel.PROFILE_SAVE]: { profile: ModelProfile; success: boolean }
+  [IpcChannel.PROFILE_DELETE]: { success: boolean }
+  [IpcChannel.PROFILE_ACTIVATE]: { success: boolean; activeProfileId: string }
+  [IpcChannel.PROFILE_GET_ACTIVE]: { profile: ModelProfile | null }
+
+  // Ollama 动态模型响应
+  [IpcChannel.OLLAMA_FETCH_MODELS]: { models: string[]; success: boolean; error?: string }
   [IpcChannel.SESSION_LOAD_ALL]: { sessions: Session[] }
   [IpcChannel.SESSION_SAVE]: { success: boolean }
   [IpcChannel.SESSION_DELETE]: { success: boolean }

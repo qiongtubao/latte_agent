@@ -63,14 +63,16 @@ export type StreamErrorCallback = (error: Error) => void
  * AI 客户端配置
  */
 export interface AIClientConfig {
-  /** API 密钥 */
-  apiKey: string
+  /** API 密钥（Ollama 等本地服务不需要） */
+  apiKey?: string
   /** 模型名称 */
   model?: string
   /** 最大 token 数 */
   maxTokens?: number
   /** 温度参数 (0-1) */
   temperature?: number
+  /** 自定义 API 端点（Ollama/代理） */
+  baseUrl?: string
 }
 
 /**

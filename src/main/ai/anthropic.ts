@@ -39,7 +39,7 @@ export class AnthropicClient implements AIClient {
     if (!config.apiKey) {
       throw new Error('Anthropic API 密钥未配置')
     }
-    this.client = new Anthropic({ apiKey: config.apiKey })
+    this.client = new Anthropic({ apiKey: config.apiKey, ...(config.baseUrl ? { baseURL: config.baseUrl } : {}) })
     this.model = config.model || 'claude-sonnet-4-6'
     this.maxTokens = config.maxTokens || 4096
     this.temperature = config.temperature ?? 1

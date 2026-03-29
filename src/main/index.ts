@@ -3,6 +3,9 @@
  * 负责创建应用窗口和管理应用生命周期
  */
 
+// 最先注册所有 AI 提供商（必须在任何使用 createClient 的代码之前）
+import './ai/register'
+
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { registerIpcHandlers } from './ipc/handlers'

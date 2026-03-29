@@ -15,8 +15,10 @@ import {
 } from '@shared/ipc'
 import { createClient, AIClient } from '@main/ai/client'
 import { classifyError, ApiError } from '@main/ai/errors'
-import { readSettings, writeSettings, hasApiKey, getFullSettings } from '@main/storage/settings'
+import { readSettings, writeSettings, hasApiKey, getFullSettings, loadProfiles, saveProfile as saveProfileToStorage, deleteProfile as deleteProfileFromStorage, activateProfile as activateProfileInStorage, getActiveProfile } from '@main/storage/settings'
 import { loadAllSessions, saveSession, deleteSession } from '@main/storage/session'
+import type { ModelProfile } from '@shared/ipc'
+import { OllamaClient } from '@main/ai/ollama'
 
 // AI 客户端实例缓存
 let aiClientInstance: AIClient | null = null
@@ -30,7 +32,8 @@ let currentStreamController: AbortController | null = null
 function getAIClient(): AIClient {
   if (!aiClientInstance) {
     const settings = getFullSettings()
-    if (!settings.apiKey) {
+    // Ollama 不需要 API Key
+    if (settings.aiProvider !== 'ollama' && !settings.apiKey) {
       throw new Error('API 密钥未配置，请前往设置页面配置')
     }
     aiClientInstance = createClient(settings.aiProvider, {
@@ -38,6 +41,7 @@ function getAIClient(): AIClient {
       model: settings.defaultModel,
       maxTokens: settings.maxTokens,
       temperature: settings.temperature,
+      baseUrl: settings.baseUrl,
     })
   }
   return aiClientInstance
@@ -57,10 +61,12 @@ function toSafeSettings() {
   const settings = readSettings()
   return {
     aiProvider: settings.aiProvider,
+    baseUrl: settings.baseUrl,
     defaultModel: settings.defaultModel,
     maxTokens: settings.maxTokens,
     temperature: settings.temperature,
     hasApiKey: Boolean(settings.apiKey),
+    activeProfileId: settings.activeProfileId || null,
   }
 }
 
@@ -185,12 +191,30 @@ export function registerIpcHandlers(): void {
     async (_event, params: IpcRequestParams<typeof IpcChannel.AI_VALIDATE_KEY>): Promise<IpcResponseData<typeof IpcChannel.AI_VALIDATE_KEY>> => {
       try {
         const settings = getFullSettings()
-        // 使用传入的密钥或已存储的密钥创建临时客户端验证
+        const provider = params.provider || settings.aiProvider
+
+        // Ollama 不需要 API 密钥，直接验证连接
+        if (provider === 'ollama') {
+          const baseUrl = params.baseUrl || settings.baseUrl || 'http://localhost:11434'
+          // 规范化 URL
+          let normalizedUrl = baseUrl
+          if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+            normalizedUrl = 'http://' + normalizedUrl
+          }
+          try {
+            const response = await fetch(`${normalizedUrl}/api/tags`, { method: 'GET' })
+            return { valid: response.ok, error: response.ok ? undefined : `Ollama 服务响应错误: ${response.status}` }
+          } catch (e) {
+            return { valid: false, error: `无法连接 Ollama 服务: ${(e as Error).message}` }
+          }
+        }
+
+        // 其他提供商需要 API 密钥
         const keyToValidate = params.apiKey || settings.apiKey
         if (!keyToValidate) {
           return { valid: false, error: '未提供 API 密钥' }
         }
-        const client = createClient(settings.aiProvider, {
+        const client = createClient(provider, {
           apiKey: keyToValidate,
         })
         const valid = await client.validateApiKey()
@@ -249,6 +273,94 @@ export function registerIpcHandlers(): void {
     IpcChannel.SETTINGS_HAS_KEY,
     (): IpcResponseData<typeof IpcChannel.SETTINGS_HAS_KEY> => {
       return { hasKey: hasApiKey() }
+    }
+  )
+
+  // ===== 模型配置档案通道 =====
+
+  // 获取所有档案列表
+  ipcMain.handle(
+    IpcChannel.PROFILE_LIST,
+    (): IpcResponseData<typeof IpcChannel.PROFILE_LIST> => {
+      return { profiles: loadProfiles() }
+    }
+  )
+
+  // 保存档案（新增或更新）
+  ipcMain.handle(
+    IpcChannel.PROFILE_SAVE,
+    (_event, params: IpcRequestParams<typeof IpcChannel.PROFILE_SAVE>): IpcResponseData<typeof IpcChannel.PROFILE_SAVE> => {
+      const profile = saveProfileToStorage(params.profile)
+      return { profile, success: true }
+    }
+  )
+
+  // 删除档案
+  ipcMain.handle(
+    IpcChannel.PROFILE_DELETE,
+    (_event, params: IpcRequestParams<typeof IpcChannel.PROFILE_DELETE>): IpcResponseData<typeof IpcChannel.PROFILE_DELETE> => {
+      const success = deleteProfileFromStorage(params.profileId)
+      return { success }
+    }
+  )
+
+  // 激活指定档案
+  ipcMain.handle(
+    IpcChannel.PROFILE_ACTIVATE,
+    (_event, params: IpcRequestParams<typeof IpcChannel.PROFILE_ACTIVATE>): IpcResponseData<typeof IpcChannel.PROFILE_ACTIVATE> => {
+      const success = activateProfileInStorage(params.profileId)
+      if (success) {
+        resetAIClient()
+      }
+      return { success, activeProfileId: params.profileId }
+    }
+  )
+
+  // 获取当前激活的档案
+  ipcMain.handle(
+    IpcChannel.PROFILE_GET_ACTIVE,
+    (): IpcResponseData<typeof IpcChannel.PROFILE_GET_ACTIVE> => {
+      return { profile: getActiveProfile() }
+    }
+  )
+
+  // ===== Ollama 动态模型列表 =====
+
+  // 从 Ollama 服务动态获取可用模型列表
+  ipcMain.handle(
+    IpcChannel.OLLAMA_FETCH_MODELS,
+    async (_event, params: IpcRequestParams<typeof IpcChannel.OLLAMA_FETCH_MODELS>): Promise<IpcResponseData<typeof IpcChannel.OLLAMA_FETCH_MODELS>> => {
+      let baseUrl = params.baseUrl || readSettings().baseUrl || 'http://localhost:11434'
+      // 自动补全协议（如果用户没输入 http:// 或 https://）
+      if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+        baseUrl = 'http://' + baseUrl
+      }
+      console.log('[IPC Handler] OLLAMA_FETCH_MODELS 被调用, baseUrl:', baseUrl)
+      try {
+        // 直接调用 Ollama API 获取模型列表，不使用会静默 fallback 的方法
+        const response = await fetch(`${baseUrl}/api/tags`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        console.log('[IPC Handler] Ollama API 响应状态:', response.status)
+        if (!response.ok) {
+          return {
+            models: [],
+            success: false,
+            error: `Ollama 服务响应错误: ${response.status} ${response.statusText}`,
+          }
+        }
+        const data = (await response.json()) as { models: Array<{ name: string }> }
+        const models = data.models?.map((m) => m.name) || []
+        return { models, success: true }
+      } catch (error) {
+        const err = error as Error
+        return {
+          models: [],
+          success: false,
+          error: `无法连接 Ollama 服务: ${err.message}。请确认 Ollama 已启动并运行在正确地址。`,
+        }
+      }
     }
   )
 
