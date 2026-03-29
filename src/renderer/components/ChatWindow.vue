@@ -358,14 +358,15 @@ async function sendMessage(): Promise<void> {
   scrollToBottom()
 
   // 保存本次请求的消息（用于重试）
-  lastFailedMessages.value = [{ role: 'user', content: text }]
+  lastFailedMessages.value = updated.map(m => ({ role: m.role, content: m.content }))
 
   // 记录流式请求开始时间
   streamStartTime.value = now
 
   try {
+    // 发送完整的历史消息（包含当前用户输入）
     await invoke(IpcChannel.AI_SEND_MESSAGE_STREAM, {
-      messages: [{ role: 'user', content: text }],
+      messages: updated.map(m => ({ role: m.role, content: m.content })),
     })
   } catch (e) {
     // 处理同步错误（如密钥未配置）
