@@ -650,7 +650,6 @@ onMounted(() => {
   // 注册内置命令
   unregisterBuiltin = registerBuiltinCommands({
     onOpenSettings: () => emit('openSettings'),
-    onModelChange: (model: string) => { /* 可扩展：通知父组件模型变更 */ },
     onNewChat: () => emit('newChat'),
     onDeleteSession: () => emit('deleteSession'),
   })

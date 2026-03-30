@@ -20,43 +20,8 @@ export interface CommandResult {
  */
 export function createModelCommands(
   onOpenSettings: () => void,
-  onModelChange: (model: string) => void
 ): Command[] {
   return [
-    {
-      path: 'model/list',
-      name: '/model/list',
-      description: '显示所有可用模型',
-      namespace: 'model',
-      action: 'list',
-      execute: async () => {
-        const result = await invoke(IpcChannel.AI_GET_MODELS)
-        const models = result.models
-        if (models.length === 0) {
-          return '当前无可用模型，请先配置 AI 提供商'
-        }
-        const lines = models.map((m, i) => `  ${i + 1}. ${m}`)
-        return `可用模型 (${result.provider}):\n${lines.join('\n')}`
-      },
-    },
-    {
-      path: 'model/set',
-      name: '/model/set',
-      description: '切换默认模型',
-      namespace: 'model',
-      action: 'set',
-      requireArgs: true,
-      argsHint: '<model_name>',
-      execute: async (args: string) => {
-        const modelName = args.trim()
-        if (!modelName) return '用法: /model/set <model_name>'
-
-        // 保存模型设置到主进程
-        await invoke(IpcChannel.SETTINGS_SET, { defaultModel: modelName })
-        onModelChange(modelName)
-        return `已切换模型: ${modelName}`
-      },
-    },
     {
       path: 'model/add',
       name: '/model/add',
@@ -154,12 +119,11 @@ export function createSessionCommands(
  */
 export function registerBuiltinCommands(options: {
   onOpenSettings: () => void
-  onModelChange: (model: string) => void
   onNewChat: () => void
   onDeleteSession: () => void
 }): () => void {
   const cmds = [
-    ...createModelCommands(options.onOpenSettings, options.onModelChange),
+    ...createModelCommands(options.onOpenSettings),
     ...createHelpCommands(),
     ...createSessionCommands(options.onNewChat, options.onDeleteSession),
   ]
