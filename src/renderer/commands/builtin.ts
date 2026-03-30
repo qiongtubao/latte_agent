@@ -33,17 +33,6 @@ export function createModelCommands(
         return '已打开设置页面，请在模型配置中添加新模型'
       },
     },
-    {
-      path: 'model/active',
-      name: '/model/active',
-      description: '查看当前使用的模型',
-      namespace: 'model',
-      action: 'active',
-      execute: async () => {
-        const settings = await invoke(IpcChannel.SETTINGS_GET)
-        return `当前模型: ${settings.defaultModel || '未设置'}\n当前提供商: ${settings.aiProvider}`
-      },
-    },
   ]
 }
 
