@@ -76,6 +76,13 @@
 
       <!-- 输入区域 -->
       <div class="input-area">
+        <!-- 模型选择器 -->
+        <div class="model-selector">
+          <select v-model="selectedModel" :disabled="loading || isStreaming" title="选择模型">
+            <option value="">默认模型</option>
+            <option v-for="m in availableModels" :key="m" :value="m">{{ m }}</option>
+          </select>
+        </div>
         <div class="input-wrapper" :class="{ 'has-command': commandPaletteVisible }">
           <!-- 命令面板下拉 -->
           <CommandPalette
@@ -235,6 +242,11 @@ const streamStartTime = ref<number | null>(null)
 const commandPaletteVisible = ref(false)
 const commandPaletteRef = ref<InstanceType<typeof CommandPalette> | null>(null)
 
+/** 可用模型列表 */
+const availableModels = ref<string[]>([])
+/** 当前选中的模型（空字符串则使用默认模型） */
+const selectedModel = ref<string>('')
+
 // 监听输入变化，控制命令面板显示
 watch(() => inputText.value, (text) => {
   commandPaletteVisible.value = text.startsWith('/') && !loading.value && !isStreaming.value
@@ -280,6 +292,18 @@ function formatDuration(ms: number): string {
   const mins = Math.floor(ms / 60000)
   const secs = Math.round((ms % 60000) / 1000)
   return `${mins}m ${secs}s`
+}
+
+/**
+ * 加载可用模型列表
+ */
+async function loadModels(): Promise<void> {
+  try {
+    const result = await invoke(IpcChannel.AI_GET_MODELS)
+    availableModels.value = result.models || []
+  } catch {
+    availableModels.value = []
+  }
 }
 
 /**
@@ -457,9 +481,10 @@ async function sendMessage(): Promise<void> {
   streamStartTime.value = now
 
   try {
-    // 发送完整的历史消息（包含当前用户输入）
+    // 发送完整的历史消息（包含当前用户输入），附带选中的模型
     await invoke(IpcChannel.AI_SEND_MESSAGE_STREAM, {
       messages: updated.map(m => ({ role: m.role, content: m.content })),
+      model: selectedModel.value || undefined,
     })
   } catch (e) {
     // 处理同步错误（如密钥未配置）
@@ -600,6 +625,7 @@ watch(() => props.messages.length, () => {
 
 onMounted(() => {
   checkApiKey()
+  loadModels()
   setupStreamListener()
   setupErrorListener()
   focusInput()
@@ -888,6 +914,34 @@ onUnmounted(() => {
   padding: 0.8rem 1.2rem;
   background: #16213e;
   border-top: 1px solid #2a3a5a;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+/* 模型选择器 */
+.model-selector select {
+  background: #0f3460;
+  border: 1px solid #2a4a6a;
+  color: #e0e0e0;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  outline: none;
+  cursor: pointer;
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.model-selector select:focus {
+  border-color: #e94560;
+}
+
+.model-selector select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .input-wrapper {
