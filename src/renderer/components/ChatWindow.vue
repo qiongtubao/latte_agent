@@ -47,6 +47,7 @@
             <!-- 消息元信息：时间、耗时、Token -->
             <div v-if="msg.timestamp" class="message-meta">
               <span class="meta-time">{{ formatTime(msg.timestamp) }}</span>
+              <span v-if="msg.role === 'assistant' && msg.model" class="meta-model">{{ msg.model }}</span>
               <span v-if="msg.role === 'assistant' && msg.duration != null" class="meta-duration">耗时 {{ formatDuration(msg.duration) }}</span>
               <span v-if="msg.role === 'assistant' && msg.inputTokens" class="meta-tokens">输入 {{ msg.inputTokens }}</span>
               <span v-if="msg.role === 'assistant' && msg.outputTokens" class="meta-tokens">输出 {{ msg.outputTokens }}</span>
@@ -376,6 +377,7 @@ function setupStreamListener(): void {
           duration,
           inputTokens: lastUsage.value?.inputTokens,
           outputTokens: lastUsage.value?.outputTokens,
+          model: lastUsage.value?.model,
         }]
         notifyMessagesUpdate(updated)
       }
@@ -485,6 +487,7 @@ async function stopStream(): Promise<void> {
         duration,
         inputTokens: lastUsage.value?.inputTokens,
         outputTokens: lastUsage.value?.outputTokens,
+        model: lastUsage.value?.model,
       }]
       notifyMessagesUpdate(updated)
     }
@@ -829,6 +832,11 @@ onUnmounted(() => {
 
 .meta-tokens {
   color: #a0d0a0;
+}
+
+/* 模型名称标签 */
+.meta-model {
+  color: #c9a0e0;
 }
 
 /* 消息删除按钮 */

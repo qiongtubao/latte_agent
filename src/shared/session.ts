@@ -15,6 +15,8 @@ export interface ChatMessage {
   inputTokens?: number
   /** 输出 token 数，仅 assistant 消息 */
   outputTokens?: number
+  /** 使用的模型名称，仅 assistant 消息 */
+  model?: string
 }
 
 /** 会话 */
