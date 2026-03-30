@@ -76,13 +76,6 @@
 
       <!-- 输入区域 -->
       <div class="input-area">
-        <!-- 模型选择器 -->
-        <div class="model-selector">
-          <select v-model="selectedModel" :disabled="loading || isStreaming" title="选择模型">
-            <option value="">默认模型</option>
-            <option v-for="m in availableModels" :key="m" :value="m">{{ m }}</option>
-          </select>
-        </div>
         <div class="input-wrapper" :class="{ 'has-command': commandPaletteVisible }">
           <!-- 命令面板下拉 -->
           <CommandPalette
@@ -100,6 +93,17 @@
             @keydown="handleKeydown"
             rows="1"
           />
+          <!-- 档案选择器（输入框内部，发送按钮前） -->
+          <select
+            v-if="profiles.length > 0"
+            v-model="selectedProfileId"
+            :disabled="loading || isStreaming"
+            class="profile-selector"
+            title="选择配置档案"
+          >
+            <option value="">默认</option>
+            <option v-for="p in profiles" :key="p.id" :value="p.id">{{ p.alias }}</option>
+          </select>
           <div class="input-actions">
             <!-- 停止生成按钮 -->
             <button
@@ -173,7 +177,7 @@
  */
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { invoke, on } from '../ipc/client'
-import { IpcChannel, StreamChunkData, ApiErrorData } from '@shared/ipc'
+import { IpcChannel, StreamChunkData, ApiErrorData, type ModelProfile } from '@shared/ipc'
 import type { ChatMessage } from '@shared/session'
 import { marked, type Tokens } from 'marked'
 import hljs from 'highlight.js'
@@ -242,10 +246,17 @@ const streamStartTime = ref<number | null>(null)
 const commandPaletteVisible = ref(false)
 const commandPaletteRef = ref<InstanceType<typeof CommandPalette> | null>(null)
 
-/** 可用模型列表 */
-const availableModels = ref<string[]>([])
-/** 当前选中的模型（空字符串则使用默认模型） */
-const selectedModel = ref<string>('')
+/** 可用配置档案列表 */
+const profiles = ref<ModelProfile[]>([])
+/** 当前选中的档案 ID（空字符串则使用默认设置） */
+const selectedProfileId = ref<string>('')
+
+/** 获取选中档案的模型名称 */
+function getSelectedModel(): string | undefined {
+  if (!selectedProfileId.value) return undefined
+  const profile = profiles.value.find(p => p.id === selectedProfileId.value)
+  return profile?.defaultModel
+}
 
 // 监听输入变化，控制命令面板显示
 watch(() => inputText.value, (text) => {
@@ -295,14 +306,21 @@ function formatDuration(ms: number): string {
 }
 
 /**
- * 加载可用模型列表
+ * 加载配置档案列表及当前激活的档案
  */
-async function loadModels(): Promise<void> {
+async function loadProfiles(): Promise<void> {
   try {
-    const result = await invoke(IpcChannel.AI_GET_MODELS)
-    availableModels.value = result.models || []
+    const [listResult, activeResult] = await Promise.all([
+      invoke(IpcChannel.PROFILE_LIST),
+      invoke(IpcChannel.PROFILE_GET_ACTIVE),
+    ])
+    profiles.value = listResult.profiles || []
+    // 默认选中当前激活的档案
+    if (activeResult.profile) {
+      selectedProfileId.value = activeResult.profile.id
+    }
   } catch {
-    availableModels.value = []
+    profiles.value = []
   }
 }
 
@@ -481,10 +499,10 @@ async function sendMessage(): Promise<void> {
   streamStartTime.value = now
 
   try {
-    // 发送完整的历史消息（包含当前用户输入），附带选中的模型
+    // 发送完整的历史消息（包含当前用户输入），附带选中的档案模型
     await invoke(IpcChannel.AI_SEND_MESSAGE_STREAM, {
       messages: updated.map(m => ({ role: m.role, content: m.content })),
-      model: selectedModel.value || undefined,
+      model: getSelectedModel(),
     })
   } catch (e) {
     // 处理同步错误（如密钥未配置）
@@ -625,7 +643,7 @@ watch(() => props.messages.length, () => {
 
 onMounted(() => {
   checkApiKey()
-  loadModels()
+  loadProfiles()
   setupStreamListener()
   setupErrorListener()
   focusInput()
@@ -914,34 +932,38 @@ onUnmounted(() => {
   padding: 0.8rem 1.2rem;
   background: #16213e;
   border-top: 1px solid #2a3a5a;
-  display: flex;
-  align-items: flex-end;
-  gap: 0.6rem;
 }
 
-/* 模型选择器 */
-.model-selector select {
-  background: #0f3460;
+/* 档案选择器（输入框内部） */
+.profile-selector {
+  background: transparent;
   border: 1px solid #2a4a6a;
-  color: #e0e0e0;
-  padding: 0.45rem 0.6rem;
-  border-radius: 8px;
-  font-size: 0.8rem;
+  color: #8ecae6;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
   outline: none;
   cursor: pointer;
-  max-width: 160px;
+  max-width: 120px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-shrink: 0;
+  margin-right: 0.3rem;
 }
 
-.model-selector select:focus {
+.profile-selector:focus {
   border-color: #e94560;
 }
 
-.model-selector select:disabled {
+.profile-selector:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.profile-selector option {
+  background: #0f3460;
+  color: #e0e0e0;
 }
 
 .input-wrapper {
